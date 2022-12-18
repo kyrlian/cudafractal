@@ -1,7 +1,11 @@
 # Write python code using nvidia cuda to render a mandelbrot fractal. When the user left clicks, zoom in by a factor of 2 into the fractal at the cursor. when the user right clicks, zoom out by a factor of 2.
 
+#pip install numba
+#pip install matplotlib
+
 import numpy as np
 from numba import cuda
+import matplotlib.pyplot as plt
 
 @cuda.jit
 def render_mandelbrot(xmin, xmax, ymin, ymax, width, height, max_iterations):
@@ -14,8 +18,8 @@ def render_mandelbrot(xmin, xmax, ymin, ymax, width, height, max_iterations):
 
     # Calculate the coordinates of each pixel
     startX, startY = cuda.grid(2)
-    gridX = cuda.gridDim.x * cuda.blockDim.x;
-    gridY = cuda.gridDim.y * cuda.blockDim.y;
+    gridX = cuda.gridDim.x * cuda.blockDim.x
+    gridY = cuda.gridDim.y * cuda.blockDim.y
     
     for x in range(startX, width, gridX):
         real = xmin + x * dx
@@ -38,7 +42,7 @@ def render_mandelbrot(xmin, xmax, ymin, ymax, width, height, max_iterations):
                 color = i + 1
                 
             # Set the colour of the pixel
-            image[y, x] = color
+            imagegrid[y, x] = color
 
 # Initialize the variables for the fractal
 xmin, xmax, ymin, ymax = -2.0, 1.0, -1.5, 1.5
@@ -46,7 +50,7 @@ width, height = 1024, 1024
 max_iterations = 255
 
 # Allocate an empty image array
-image = np.zeros((height, width), dtype = np.uint8)
+imagegrid = np.zeros((height, width), dtype = np.uint8)
 
 # Set the grid size
 threadsperblock = (8, 8)
@@ -79,12 +83,12 @@ def click(event):
     render_mandelbrot[blockspergrid, threadsperblock](xmin, xmax, ymin, ymax, width, height, max_iterations)
     
     # Show the image
-    plt.imshow(image)
+    plt.imshow(imagegrid)
     plt.show()
 
 # Connect the click event to the handler
 plt.connect('button_press_event', click)
 
 # Show the image
-plt.imshow(image)
+plt.imshow(imagegrid)
 plt.show()
