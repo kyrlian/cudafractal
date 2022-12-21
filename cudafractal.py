@@ -10,7 +10,9 @@ from matplotlib import pyplot
 from numba import cuda
 from numba import float64, int8, complex128
 from math import log
-
+from scipy.misc import toimage
+import tkinter
+from PIL import Image, ImageTk
 
 @cuda.jit("void(int8[:,:,:], int32, int32, int32, int32)", device=True)
 def set_image_color(image_array, x, y, iterations, max_iterations):
@@ -49,69 +51,98 @@ def mandelbrot(image_array, topleft, xstride, ystride, max_iter):
         set_image_color(image_array, x, y, nbi, max_iter)
 
 
-def create_image(xmin, xmax, ymin, ymax, max_iter, base_accuracy):
+def create_image(xmin, xmax, ymin, ymax, max_iter, display_width, display_heigth):
     timerstart = timeit.default_timer()
-
-    if abs(xmax - xmin) > abs(ymax - ymin):
-        ny = base_accuracy
-        nx = int((base_accuracy * abs(xmax - xmin) / abs(ymax - ymin)))
-    else:
-        nx = base_accuracy
-        ny = int(base_accuracy * abs(ymax - ymin) / abs(xmax - xmin))
-    xstride = abs(xmax - xmin) / nx
-    ystride = abs(ymax - ymin) / ny
+    xstride = abs(xmax - xmin) / display_width
+    ystride = abs(ymax - ymin) / display_heigth
     topleft = complex128(xmin + 1j * ymax)
-    image_array = numpy.zeros((ny, nx, 3), dtype=numpy.uint8)
-
-    # device_array = cuda.to_device(array_of_random)
-    # device_output_array = cuda.device_array(size)
-    # kernel[512, 512](device_array,  .5, device_output_array)
-    # output_array = device_output_array.copy_to_host()
-
-    device_image = cuda.to_device(image_array)
+    # Init image array on host, and send to device
+    # image_array = numpy.zeros((display_width , display_heigth, 3), dtype=numpy.uint8)
+    # device_array = cuda.to_device(image_array)
+    # Init image array directly on device
+    device_output_array = cuda.device_array(
+        (display_width, display_heigth, 3), dtype=numpy.uint8
+    )
     threadsperblock = (32, 16)
     blockspergrid = (
-        math.ceil(image_array.shape[0] / threadsperblock[0]),
-        math.ceil(image_array.shape[1] / threadsperblock[1]),
+        math.ceil(display_width / threadsperblock[0]),
+        math.ceil(display_heigth / threadsperblock[1]),
     )
-    # blockspergrid = (image_array.shape[0] + threadsperblock[0] - 1) // threadsperblock[0], (image_array.shape[1] + threadsperblock[1] - 1) // threadsperblock[1]
     mandelbrot[blockspergrid, threadsperblock](
-        device_image, topleft, xstride, ystride, max_iter
+        device_output_array, topleft, xstride, ystride, max_iter
     )
-    image_array = device_image.copy_to_host()
-
+    output_array = device_output_array.copy_to_host()
     sys.stdout.write(
         "\r" + "Frame calculated in %f s" % (timeit.default_timer() - timerstart)
     )
-    pyplot.imshow(image_array)
-    pyplot.show()
-    return image_array
+    # directly create and show a pylot plot (good for one shot)
+    # pyplot.imshow(output_array)
+    # pyplot.show()
+    return output_array
 
 
-# Initialize the variables for the fractal
-xmin, xmax, ymin, ymax = -2.0, 1.0, -1.5, 1.5
-base_accuracy = 1024
+# INITs
 max_iterations = 255
-
-image_array = create_image(xmin, xmax, ymin, ymax, max_iterations, base_accuracy)
+display_heigth = 1440
+display_ratio = 4 / 3
+display_width = display_heigth * display_ratio
+xcenter = 0  # xmin, xmax = -2.0, 1.0
+ycenter = 0  # ymin, ymax = -1.5, 1.5
+yheight = 3
+xwidth = yheight * display_ratio  # 4
+xmin = xcenter - xwidth / 2  # -2
+xmax = xcenter + xwidth / 2  # 2
+ymin = ycenter - yheight / 2  # -1.5
+ymax = ycenter + yheight / 2  # +1.5
+zoomrate = 2
 
 # Handle user click events
+def reset_size():
+    global xcenter, ycenter, yheight
+    xcenter = 0
+    ycenter = 0
+    yheight = 3
+    recalc_size()
 
+def recalc_size():
+    global xwidth, xmin, xmax, ymin, ymax
+    xwidth = yheight * display_ratio
+    xmin = xcenter - xwidth / 2
+    xmax = xcenter + xwidth / 2
+    ymin = ycenter - yheight / 2
+    ymax = ycenter + yheight / 2
 
-def click(event):
-    mouseX, mouseY = int(event.xdata), int(event.ydata)
-    if event.button == "left":
-        # Zoom in
-        xmin = xmin + mouseX * (xmax - xmin) / image_array.shape[0] - (xmax - xmin) / 4
-        ymin = ymin + mouseY * (ymax - ymin) / image_array.shape[1] - (ymax - ymin) / 4
-        xmax = xmin + (xmax - xmin) / 2
-        ymax = ymin + (ymax - ymin) / 2
-    elif event.button == "right":
-        # Zoom out
-        xmin = xmin - (xmax - xmin) / 2
-        ymin = ymin - (ymax - ymin) / 2
-        xmax = xmin + (xmax - xmin) * 2
-        ymax = ymin + (ymax - ymin) * 2
-    else:
-        return
-    create_image(xmin, xmax, ymin, ymax, max_iterations, base_accuracy)
+def clickzoomin(event):
+    mouseX, mouseY = int(event.x), int(event.y)
+    # Zoom in
+    sys.stdout.write("Zoom in")
+    xcenter = xmin + mouseX * (xmax - xmin) / display_width
+    ycenter = ymin + mouseY * (ymax - ymin) / display_heigth
+    yheight /= zoomrate
+    swapimage()
+
+def clickzoomout(event):
+    mouseX, mouseY = int(event.x), int(event.y)
+    # Zoom out
+    sys.stdout.write("Zoom out")
+    yheight *= zoomrate
+    swapimage()
+
+def addimage(canvas):
+    recalc_size()
+    image_array = create_image(xmin, xmax, ymin, ymax, max_iterations, display_width, display_heigth)
+    img = ImageTk.PhotoImage(image=Image.fromarray(image_array))
+    canvas.create_image(0, 0, image=img, tags="fractal")
+
+def swapimage():
+    global canvas
+    canvas.delete("fractal")
+    addimage(canvas)
+
+tkroot = tkinter.Tk()
+canvas = tkinter.Canvas(tkroot, width=display_width, height=display_heigth)
+canvas.pack()
+addimage(canvas)
+canvas.bind("<Button-1>", clickzoomin)
+canvas.bind("<Button-2>", clickzoomout)
+tkroot.mainloop()
