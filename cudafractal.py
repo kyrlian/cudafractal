@@ -85,8 +85,10 @@ def compute_threadsperblock():
 
 # INITs
 max_iterations = 255
-h=256
-window_size = display_width, display_heigth = h * 4 / 3, h
+display_heigth=256
+display_ratio = 4/3
+display_width = math.floor(display_heigth * display_ratio)
+window_size = display_width, display_heigth
 zoomrate = 2
 
 # Handle user click events

@@ -9,11 +9,7 @@ from numba import float64, complex128
 from math import log
 import pygame
 
-def set_image_color(pixel_array, x, y, iterations, max_iterations):
-    if iterations == max_iterations:  # BLACK
-        pixel_array[x, y] = (0, 0, 0)
-    else:
-        k = 6.0 * log(float64(iterations)) / log(float64(max_iterations))
+def set_image_color_k(pixel_array, x, y, k):
         fract = k - math.floor(k)
         r, g, b = 0, 0, 0
         if k < 1:  # RED to YELLOW
@@ -30,6 +26,25 @@ def set_image_color(pixel_array, x, y, iterations, max_iterations):
             r, g, b = 1, 0, 1 - fract
         pixel_array[x, y] = (r * 255, g * 255, b * 255)
 
+def set_image_color_log_hue(pixel_array, x, y, iterations, max_iterations):
+    if iterations == max_iterations:  # BLACK
+        pixel_array[x, y] = (0, 0, 0)
+    else:
+        k = 6.0 * log(float64(iterations)) / log(float64(max_iterations))
+        set_image_color_k(pixel_array, x, y, k)
+
+def set_image_color_hue(pixel_array, x, y, iterations, max_iterations):
+    if iterations == max_iterations:  # BLACK
+        pixel_array[x, y] = (0, 0, 0)
+    else:
+        k = 6.0 * float64(iterations) / float64(max_iterations)
+        set_image_color_k(pixel_array, x, y, k)
+
+colorfunctions = [set_image_color_log_hue, set_image_color_hue]
+currentcolorfunction = 0
+
+def set_image_color(pixel_array, x, y, nbi, max_iter):
+    colorfunctions[currentcolorfunction](pixel_array, x, y, nbi, max_iter)
 
 def mandelbrot_nocuda(pixel_array, topleft, xstride, ystride, max_iter):
     for x in range(pixel_array.shape[0]):
@@ -57,8 +72,10 @@ def create_image(pixel_array, xmin, xmax, ymin, ymax, max_iter):
 
 # INITs
 max_iterations = 255
-h=256
-window_size = display_width, display_heigth = h * 4 / 3, h
+display_heigth=256
+display_ratio = 4/3
+display_width = math.floor(display_heigth * display_ratio)
+window_size = display_width, display_heigth
 zoomrate = 2
 
 # Handle user click events
@@ -90,6 +107,9 @@ def zoom(pos, zoomrate):
         % (mouseX, mouseY, xcenter, ycenter, zoomrate)
     )
 
+def nextpalette():
+    global currentcolorfunction
+    currentcolorfunction = (currentcolorfunction + 1) % len(colorfunctions)
 
 def redraw(pixel_array):
     recalc_size()
@@ -117,6 +137,9 @@ while running:
             if event.key == pygame.K_r:
                 reset_size()
                 redraw(screen_pixels)
+            if event.key == pygame.K_p:
+                nextpalette()
+                redraw(screen_pixels) 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             # 1 - left click
             # 2 - middle click
