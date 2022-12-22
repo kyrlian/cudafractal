@@ -16,6 +16,7 @@ def set_image_color(pixel_array, x, y, iterations, max_iterations):
         pixel_array[x, y] = (0, 0, 0)
     else:
         k = 6.0 * log(float64(iterations)) / log(float64(max_iterations))
+        # k = 6.0 * float64(iterations) / float64(max_iterations)
         fract = k - math.floor(k)
         r, g, b = 0, 0, 0
         if k < 1:  # RED to YELLOW
