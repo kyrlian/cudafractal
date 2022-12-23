@@ -41,7 +41,9 @@ def set_image_color_log_lastr_to_hue(
     if lastr < 1 or iterations == 0:
         pixel_array[x, y] = (0,0,0)
     else:
-        set_image_color_hue(pixel_array, x, y,log(lastr/escaper))
+        # sys.stdout.write("%f, %f, %f\n"%(lastr, log(lastr), 1/lastr))
+        # set_image_color_hue(pixel_array, x, y,log(lastr/escaper))
+        set_image_color_hue(pixel_array, x, y,1/lastr)
 
 
 def set_image_color_log_iter_to_hue(
