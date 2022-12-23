@@ -38,7 +38,10 @@ def set_image_color_log_lastr_to_hue(
     pixel_array, x, y, iterations, max_iterations, lastr
 ):
     # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
-    set_image_color_hue(pixel_array, x, y,log(lastr)/(2**iterations))
+    if lastr < 1 or iterations == 0:
+        pixel_array[x, y] = (0,0,0)
+    else:
+        set_image_color_hue(pixel_array, x, y,log(lastr/escaper))
 
 
 def set_image_color_log_iter_to_hue(
@@ -71,7 +74,7 @@ def mandelbrot(pixel_array, topleft, xstride, ystride, max_iter, p, r, epsilon, 
             lastr = 0
             der = complex128(1+0j)
             while nbi < max_iter and lastr < r and (der.real**2 + der.imag**2) > epsilon:
-                der = der * 2 * z
+                der =  der * p * z # p * z
                 z = z**p + c
                 nbi += 1
                 lastr = z.real**2 + z.imag**2
