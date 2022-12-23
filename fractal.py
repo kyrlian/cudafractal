@@ -35,30 +35,39 @@ def set_image_color_hue(pixel_array, x, y, k):
 
 
 def set_image_color_log_lastr_to_hue(
-    pixel_array, x, y, iterations, max_iterations, lastr
+    pixel_array, x, y, iterations, max_iterations, r2, der2
 ):
     # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
-    if lastr < 1 or iterations == 0:
-        pixel_array[x, y] = (0,0,0)
+    if r2 < 1 or iterations == 0:
+        pixel_array[x, y] = (0, 0, 0)
     else:
         # sys.stdout.write("%f, %f, %f\n"%(lastr, log(lastr), 1/lastr))
         # set_image_color_hue(pixel_array, x, y,log(lastr/escaper))
-        set_image_color_hue(pixel_array, x, y,1/lastr)
+        set_image_color_hue(pixel_array, x, y, 1 / r2)
 
 
 def set_image_color_log_iter_to_hue(
-    pixel_array, x, y, iterations, max_iterations, lastr
+    pixel_array, x, y, iterations, max_iterations, r2, der2
 ):
-    set_image_color_hue(pixel_array, x, y, log(float64(iterations)) / log(float64(max_iterations)))
+    set_image_color_hue(
+        pixel_array, x, y, log(float64(iterations)) / log(float64(max_iterations))
+    )
 
-def set_image_color_iter_to_hue(pixel_array, x, y, iterations, max_iterations, lastr):
-    set_image_color_hue(pixel_array, x, y,  float64(iterations) / float64(max_iterations))
 
-def set_image_color(pixel_array, x, y, nbi, max_iter, lastr):
+def set_image_color_iter_to_hue(
+    pixel_array, x, y, iterations, max_iterations, r2, der2
+):
+    set_image_color_hue(
+        pixel_array, x, y, float64(iterations) / float64(max_iterations)
+    )
+
+
+def set_image_color(pixel_array, x, y, nbi, max_iter, r2, der2):
     if nbi == 0 or nbi == max_iter:
-        pixel_array[x, y] = (0,0,0)
+        pixel_array[x, y] = (0, 0, 0)
     else:
-        colorfunctions[currentcolorfunction](pixel_array, x, y, nbi, max_iter, lastr)
+        colorfunctions[currentcolorfunction](pixel_array, x, y, nbi, max_iter, r2, der2)
+
 
 colorfunctions = [
     set_image_color_log_iter_to_hue,
@@ -67,34 +76,46 @@ colorfunctions = [
 ]
 currentcolorfunction = 0
 
-def mandelbrot(pixel_array, topleft, xstride, ystride, max_iter, p, r, epsilon, juliax, juliay):
+
+def mandelbrot(
+    pixel_array, topleft, xstride, ystride, max_iter, p, r, epsilon, juliax, juliay
+):
     for x in range(pixel_array.shape[0]):
         for y in range(pixel_array.shape[1]):
             c = complex128(topleft + x * xstride - 1j * y * ystride)
-            z = c # complex128(0 + 0j)
+            z = c  # complex128(0 + 0j)
             nbi = 0
-            lastr = 0
-            der = complex128(1+0j)
-            while nbi < max_iter and lastr < r and (der.real**2 + der.imag**2) > epsilon:
-                der =  der * p * z # p * z
+            z2 = 0
+            der = complex128(1 + 0j)
+            der2 = 1
+            while nbi < max_iter and z2 < r and der2 > epsilon:
+                der = der * p * z
                 z = z**p + c
                 nbi += 1
-                lastr = z.real**2 + z.imag**2
-            set_image_color(pixel_array, x, y, nbi, max_iter, lastr)
+                z2 = z.real**2 + z.imag**2
+                der2 = der.real**2 + der.imag**2
+            set_image_color(pixel_array, x, y, nbi, max_iter, z2, der2)
 
 
-def julia(pixel_array, topleft, xstride, ystride, max_iter, p, r, epsilon, juliax, juliay):
+def julia(
+    pixel_array, topleft, xstride, ystride, max_iter, p, r, epsilon, juliax, juliay
+):
     for x in range(pixel_array.shape[0]):
         for y in range(pixel_array.shape[1]):
             c = complex128(juliax + 1j * juliay)
             z = complex128(topleft + x * xstride - 1j * y * ystride)
             nbi = 0
-            lastr = 0
-            while nbi < max_iter and lastr < r:
+            z2 = 0
+            der = complex128(1 + 0j)
+            der2 = 1
+            while nbi < max_iter and z2 < r and der2 > epsilon:
+                # TODO test julia with/without der
+                der = der * p * z
                 z = z**p + c
                 nbi += 1
-                lastr = z.real * z.real + z.imag * z.imag
-            set_image_color(pixel_array, x, y, nbi, max_iter, lastr)
+                z2 = z.real**2 + z.imag**2
+                der2 = der.real**2 + der.imag**2
+            set_image_color(pixel_array, x, y, nbi, max_iter, z2, der2)
 
 
 fractalmodes = [mandelbrot, julia]
@@ -102,7 +123,18 @@ currentfractalmode = 0
 
 
 def create_image(
-    fractalmode, pixel_array, xmin, xmax, ymin, ymax, max_iter, p, r, epsilon, juliax, juliay
+    fractalmode,
+    pixel_array,
+    xmin,
+    xmax,
+    ymin,
+    ymax,
+    max_iter,
+    p,
+    r,
+    epsilon,
+    juliax,
+    juliay,
 ):
     timerstart = timeit.default_timer()
     xstride = abs(xmax - xmin) / pixel_array.shape[0]
@@ -110,7 +142,9 @@ def create_image(
     topleft = complex128(xmin + 1j * ymax)
     # mandelbrot(pixel_array, topleft, xstride, ystride, max_iter, p)
     # julia(pixel_array, topleft, xstride, ystride, max_iter, p, juliax, juliay)
-    fractalmode(pixel_array, topleft, xstride, ystride, max_iter, p, r, epsilon, juliax, juliay)
+    fractalmode(
+        pixel_array, topleft, xstride, ystride, max_iter, p, r, epsilon, juliax, juliay
+    )
     sys.stdout.write(
         "Frame calculated in %f s \n" % (timeit.default_timer() - timerstart)
     )
@@ -137,7 +171,7 @@ def create_image_profiling():
 
 def pygamemain():
     # Initialize constants
-    display_heigth = 256
+    display_heigth = 512
     display_ratio = 4 / 3
     display_width = math.floor(display_heigth * display_ratio)
     window_size = display_width, display_heigth
@@ -212,7 +246,6 @@ def pygamemain():
         maxiterations *= maxiterations
         sys.stdout.write("Max iterations: %f \n" % maxiterations)
 
-
     def changepower(plusminus):
         global power
         power = (power + plusminus) % 16
@@ -226,7 +259,7 @@ def pygamemain():
     def changeepsilon(factor):
         global epsilon
         if factor == epsilon == 0:
-            epsilon = .001
+            epsilon = 0.001
         else:
             epsilon *= factor
         sys.stdout.write("Epsilon: %f \n" % epsilon)
@@ -246,13 +279,23 @@ def pygamemain():
         sys.stdout.write("z, left click: zoom in\n")
         sys.stdout.write("s, right click: zoom out \n")
         sys.stdout.write("up, down, left, right: pan \n")
-        sys.stdout.write("c: change color function - current: %s \n" % colorfunctions[currentcolorfunction].__name__)
-        sys.stdout.write("i, j: max_iterations up/down (def:100) - current: %i \n" % maxiterations)
+        sys.stdout.write(
+            "c: change color function - current: %s \n"
+            % colorfunctions[currentcolorfunction].__name__
+        )
+        sys.stdout.write(
+            "i, j: max_iterations up/down (def:100) - current: %i \n" % maxiterations
+        )
         sys.stdout.write("p, l: power up/down (def:2) - current: %i \n" % power)
-        sys.stdout.write("r, t: escape radius up/down (def:4) - current: %i \n" % escaper)
+        sys.stdout.write(
+            "r, t: escape radius up/down (def:4) - current: %i \n" % escaper
+        )
         sys.stdout.write("e, f: epsilon up/down (def:.001) - current: %i \n" % epsilon)
         sys.stdout.write("a: epsilon=0 - current: %i \n" % epsilon)
-        sys.stdout.write("j, middle click: julia/mandel - current: %s \n" % fractalmodes[currentfractalmode].__name__)
+        sys.stdout.write(
+            "j, middle click: julia/mandel - current: %s \n"
+            % fractalmodes[currentfractalmode].__name__
+        )
         sys.stdout.write("backspace: reset \n")
         sys.stdout.write("q: quit \n")
 
@@ -293,15 +336,15 @@ def pygamemain():
                 if event.key == pygame.K_i:
                     changemaxiterations(1)
                 if event.key == pygame.K_j:
-                    changemaxiterations(.5)
+                    changemaxiterations(0.5)
                 if event.key == pygame.K_r:
                     changeescaper(2)
                 if event.key == pygame.K_t:
-                    changeescaper(.5)
+                    changeescaper(0.5)
                 if event.key == pygame.K_a:
                     changeepsilon(0)
                 if event.key == pygame.K_e:
-                    changeepsilon(.1)
+                    changeepsilon(0.1)
                 if event.key == pygame.K_f:
                     changeepsilon(10)
                 if event.key == pygame.K_BACKSPACE:
