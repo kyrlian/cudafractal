@@ -43,9 +43,11 @@ def set_image_color(pixels, x, y, nbi, max_iter, z2, r, der2, cmode, palette):
                 k = log(float64(nbi)) / log(float64(max_iter))
             case 2:
                 # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
-                 k = float64(r) / float64(z2)
+                k = float64(r) / float64(z2)  # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
             case 3:
                 k = log(float64(r)) / log(float64(z2))
+            case 4:
+                k = math.sin(log(z2)) / 2 + 0.5
         match palette:
             case 0:  # hue
                 set_color_hue(pixels, x, y, k)
@@ -56,7 +58,7 @@ def set_image_color(pixels, x, y, nbi, max_iter, z2, r, der2, cmode, palette):
 
 
 currentcolormode = 0
-nbcolormodes = 4
+nbcolormodes = 5
 currentpalette = 0
 nbpalettes = 2
 
