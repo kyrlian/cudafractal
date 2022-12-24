@@ -6,75 +6,78 @@ import math
 from numba import float64
 from math import log
 import pygame
+import sys
 
 
-def set_image_color_k(pixel_array, x, y, k):
-    fract = k - math.floor(k)
+def set_color_hue(pixel_array, x, y, k):
+    # k should be [0:1]
+    k6 = 6.0 * k
+    fk = math.floor(k6)
+    fract = k6 - fk
     r, g, b = 0, 0, 0
-    if k < 1:  # RED to YELLOW
-        r, g, b = 1, fract, 0
-    elif k < 2:  # YELLOW to GREEN
-        r, g, b = 1 - fract, 1, 0
-    elif k < 3:  # GREEN to CYAN
-        r, g, b = 0, 1, fract
-    elif k < 4:  # CYAN to BLUE
-        r, g, b = 0, 1 - fract, 1
-    elif k < 5:  # BLUE to MAGENTA
-        r, g, b = fract, 0, 1
-    elif k < 6:  # MAGENTA to RED
-        r, g, b = 1, 0, 1 - fract
+    match fk:
+        case 0:  # RED to YELLOW
+            r, g, b = 1, fract, 0
+        case 1:  # YELLOW to GREEN
+            r, g, b = 1 - fract, 1, 0
+        case 2:  # GREEN to CYAN
+            r, g, b = 0, 1, fract
+        case 3:  # CYAN to BLUE
+            r, g, b = 0, 1 - fract, 1
+        case 4:  # BLUE to MAGENTA
+            r, g, b = fract, 0, 1
+        case 5:  # MAGENTA to RED
+            r, g, b = 1, 0, 1 - fract
     pixel_array[x, y] = (r * 255, g * 255, b * 255)
 
 
-def set_image_color_log_hue(pixel_array, x, y, iterations, max_iterations):
-    if iterations == max_iterations:  # BLACK
-        pixel_array[x, y] = (0, 0, 0)
-    else:
-        k = 6.0 * log(float64(iterations)) / log(float64(max_iterations))
-        set_image_color_k(pixel_array, x, y, k)
+def set_image_color(pixels, x, y, cmode, palette):
+    nbi = x+1
+    max_iter = pixels.shape[0]
+    match cmode:
+        case 0:
+            k = float64(nbi) / float64(max_iter)
+        case 1:
+            k = log(float64(nbi)) / log(float64(max_iter))
+        case 2:
+            # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
+            k = 1 / nbi
+        case 3:
+            k = math.sin(nbi/max_iter) / 2 + 0.5
+    match palette:
+        case 0:  # hue
+            set_color_hue(pixels, x, y, k)
+        case 1:  # graysscale
+            pixels[x, y] = (k * 255, k * 255, k * 255)
+        case 2 : 
+            r = math.sin(k) / 2 + 0.5
+            g = math.sin(2 * k) / 2 + 0.5
+            b = math.sin(4 * k) / 2 + 0.5
+            pixels[x, y] = (r * 255, g * 255, b * 255)
+
+currentcolormode = 0
+nbcolormodes = 4
+currentpalette = 0
+nbpalettes = 3
 
 
-def set_image_color_hue(pixel_array, x, y, iterations, max_iterations):
-    if iterations == max_iterations:  # BLACK
-        pixel_array[x, y] = (0, 0, 0)
-    else:
-        k = 6.0 * float64(iterations) / float64(max_iterations)
-        set_image_color_k(pixel_array, x, y, k)
-
-def set_image_color_nb(pixel_array, x, y, iterations, max_iterations):
-    if iterations == max_iterations:  # BLACK
-        pixel_array[x, y] = (0, 0, 0)
-    else:
-        r = g = b = iterations / max_iterations
-        pixel_array[x, y] = (r * 255, g * 255, b * 255)
-
-def set_image_color_sin(pixel_array, x, y, iterations, max_iterations):
-    if iterations == max_iterations:  # BLACK
-        pixel_array[x, y] = (0, 0, 0)
-    else:
-        r = math.sin(iterations / max_iterations) / 2 + 0.5
-        g = math.sin(2 * iterations / max_iterations) / 2 + 0.5
-        b = math.sin(4 * iterations / max_iterations) / 2 + 0.5
-        pixel_array[x, y] = (r * 255, g * 255, b * 255)
+def changecolormode():
+    global currentcolormode
+    currentcolormode = (currentcolormode + 1) % nbcolormodes
+    sys.stdout.write("Color mode: %i \n" % currentcolormode)
 
 
-colorfunctions = [set_image_color_log_hue, set_image_color_hue, set_image_color_sin, set_image_color_nb]
-currentcolorfunction = 0
-
-
-def set_image_color(pixel_array, x, y, nbi, max_iter):
-    colorfunctions[currentcolorfunction](pixel_array, x, y, nbi, max_iter)
-
-
-def nextpalette():
-    global currentcolorfunction
-    currentcolorfunction = (currentcolorfunction + 1) % len(colorfunctions)
+def changecolorpalette():
+    global currentpalette
+    currentpalette = (currentpalette + 1) % nbpalettes
+    sys.stdout.write("Palette: %i \n" % currentpalette)
 
 
 def redraw(pixel_array):
     for x in range(pixel_array.shape[0]):
+        set_image_color(pixel_array, x, 0, currentcolormode, currentpalette)
         for y in range(pixel_array.shape[1]):
-            set_image_color(pixel_array, x, y, x + 1, pixel_array.shape[0])
+            pixel_array[x, y] = pixel_array[x, 0]
     pygame.display.flip()
 
 
@@ -98,10 +101,14 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_q:
-                running = False
-            if event.key == pygame.K_p:
-                nextpalette()
-                redraw(screen_pixels)
+            match event.key:
+                case pygame.K_q:
+                    running = False
+                case pygame.K_k:
+                    changecolormode()
+                    redraw(screen_pixels)
+                case pygame.K_c:
+                    changecolorpalette()
+                    redraw(screen_pixels)
 # Quit pygame
 pygame.quit()
