@@ -2,6 +2,8 @@
 # When the user left clicks, zoom in by a factor of 2 into the fractal at the cursor.
 # When the user right clicks, zoom out by a factor of 2.
 
+# without cuda
+
 import cProfile
 import math
 import timeit
@@ -31,7 +33,8 @@ def set_color_hue(pixel_array, x, y, k):
             r, g, b = fract, 0, 1
         case 5:  # MAGENTA to RED
             r, g, b = 1, 0, 1 - fract
-    pixel_array[x, y] = (r * 255, g * 255, b * 255)
+    packed = (int(r * 255)*256 + int(g * 255))*256 + int(b * 255)
+    pixel_array[x, y] = packed
 
 
 def set_image_color(pixels, x, y, nbi, max_iter, z2, r, der2, cmode, palette):
