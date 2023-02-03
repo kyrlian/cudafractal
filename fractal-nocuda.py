@@ -3,6 +3,7 @@
 # When the user right clicks, zoom out by a factor of 2.
 
 # without cuda
+# pip install numba pygame numpy
 
 import cProfile
 import math

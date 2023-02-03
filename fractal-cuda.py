@@ -1,6 +1,8 @@
 # Based on fractal-cuda-simple.py
 # with more keyboard controls, and color mode choices
 
+# pip install numba pygame numpy
+
 import cProfile
 import math
 import timeit
