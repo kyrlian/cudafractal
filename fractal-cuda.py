@@ -65,11 +65,13 @@ def set_pixel_color(device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palet
     else:
         device_array[x, y] = 0
 
-
+#TODO use list of color mode names
 currentcolormode = 0
 nbcolormodes = 5
 currentpalette = 0
 nbpalettes = 2
+
+#TODO allow to change palette length
 
 @cuda.jit('void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32)')
 def mandelbrot(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette):
