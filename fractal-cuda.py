@@ -13,51 +13,54 @@ import pygame
 import numpy
 from numba import cuda
 
-
-@cuda.jit('void(uint32[:,:], int32, int32, float64)', device=True)
-def set_color_hue(device_array, x, y, k):
-    # k should be [0:1]
-    k6 = 6.0 * k
-    fk = math.floor(k6)
-    fract = k6 - fk
+@cuda.jit('void(uint32[:,:], int32, int32, float64, float64, float64)', device=True)
+def set_color_hsv(device_array, x, y, h, s, v ):
+    # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
-    match fk:
-        case 0:  # RED to YELLOW
-            r, g, b = 1, fract, 0
-        case 1:  # YELLOW to GREEN
-            r, g, b = 1 - fract, 1, 0
-        case 2:  # GREEN to CYAN
-            r, g, b = 0, 1, fract
-        case 3:  # CYAN to BLUE
-            r, g, b = 0, 1 - fract, 1
-        case 4:  # BLUE to MAGENTA
-            r, g, b = fract, 0, 1
-        case 5:  # MAGENTA to RED
-            r, g, b = 1, 0, 1 - fract
+    if s:
+        if h == 1.0: h = 0.0
+        i = int(h*6.0)
+        f = h*6.0 - i
+        
+        w = v * (1.0 - s)
+        q = v * (1.0 - s * f)
+        t = v * (1.0 - s * (1.0 - f))
+        
+        if i==0: r,g,b = v, t, w
+        if i==1: r,g,b = q, v, w
+        if i==2: r,g,b = w, v, t
+        if i==3: r,g,b = w, q, v
+        if i==4: r,g,b = t, w, v
+        if i==5: r,g,b = v, w, q
+    else: r, g, b=v, v, v
     device_array[x, y] = (int(r * 255)*256 + int(g * 255))*256 + int(b * 255)
-
 
 @cuda.jit('void(uint32[:,:], int32, int32, int32, int32, float64, float64, float64, int32, int32)', device=True)
 def set_pixel_color(device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palette):
     if z2 > r:
+        # first calculate k based on color mode
+        # k should be 0-1
         match cmode:
             case 0:
-                k = float64(nbi) / float64(max_iter)
+                k = float64(nbi % 255 / 255)
             case 1:
-                k = log(float64(nbi)) / log(float64(max_iter))
+                k = float64(nbi/max_iter)
             case 2:
+                k = log(float64(nbi)) / log(float64(max_iter))
+            case 3:
                 # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
                 # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
                 k = float64(r) / float64(z2)
-            case 3:
+            case 4:
                 k = log(float64(r)) / log(float64(z2))
-            case 4: 
+            case 5: 
                 #k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES
                 #k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES
                 k = 1/z2
+        # then calculate color from k
         match palette:
             case 0:  # hue
-                set_color_hue(device_array, x, y, k)
+                set_color_hsv(device_array, x, y, k, 1, 1)
             case 1:  # grayscale
                 # pixels[x, y] = (k * 255, k * 255, k * 255)
                 kk = int(k * 255)
@@ -67,7 +70,7 @@ def set_pixel_color(device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palet
 
 #TODO use list of color mode names
 currentcolormode = 0
-nbcolormodes = 5
+nbcolormodes = 6
 currentpalette = 0
 nbpalettes = 2
 
@@ -194,7 +197,7 @@ def pygamemain():
         xcenter = -0.5
         ycenter = 0
         yheight = 3
-        maxiterations = 100
+        maxiterations = 1000
         power = 2
         escaper = 4
         epsilon = 0.001
@@ -259,7 +262,7 @@ def pygamemain():
 
     def changemaxiterations(factor):
         global maxiterations
-        maxiterations *= maxiterations
+        maxiterations = int(maxiterations * factor)
         sys.stdout.write("Max iterations: %f \n" % maxiterations)
 
     def changepower(plusminus):
@@ -269,7 +272,7 @@ def pygamemain():
 
     def changeescaper(factor):
         global escaper
-        escaper *= factor
+        escaper = int(escaper * factor)
         sys.stdout.write("Escape R: %f \n" % escaper)
 
     def changeepsilon(factor):
@@ -355,9 +358,9 @@ def pygamemain():
                         pan(1, 0)
                     case pygame.K_i:
                         if shift:
-                            changemaxiterations(0.5)
+                            changemaxiterations(0.9)
                         else:
-                            changemaxiterations(1)
+                            changemaxiterations(1.1)
                     case pygame.K_r:
                         if shift:
                             changeescaper(0.5)
