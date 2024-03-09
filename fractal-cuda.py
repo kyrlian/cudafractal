@@ -35,14 +35,15 @@ def set_color_hsv(device_array, x, y, h, s, v ):
     else: r, g, b=v, v, v
     device_array[x, y] = (int(r * 255)*256 + int(g * 255))*256 + int(b * 255)
 
-@cuda.jit('void(uint32[:,:], int32, int32, int32, int32, float64, float64, float64, int32, int32)', device=True)
-def set_pixel_color(device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palette):
+@cuda.jit('void(uint32[:,:], int32, int32, int32, int32, float64, float64, float64, int32, int32, int32)', device=True)
+def set_pixel_color(device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palette, color_waves):
     if z2 > r:
         # first calculate k based on color mode
         # k should be 0-1
         match cmode:
             case 0:
-                k = float64(nbi % 255 / 255)
+                mic = max_iter / color_waves
+                k = float64(nbi % mic / mic)
             case 1:
                 k = float64(nbi/max_iter)
             case 2:
@@ -76,8 +77,8 @@ nbpalettes = 2
 
 #TODO allow to change palette length
 
-@cuda.jit('void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32)')
-def mandelbrot(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette):
+@cuda.jit('void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32, int32)')
+def mandelbrot(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette, color_waves):
     x, y = cuda.grid(2)
     if x < device_array.shape[0] and y < device_array.shape[1]:
         c = complex128(topleft + x * xstep - 1j * y * ystep)
@@ -93,10 +94,10 @@ def mandelbrot(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy,
             z2 = z.real**2 + z.imag**2
             der2 = der.real**2 + der.imag**2
         set_pixel_color(device_array, x, y, nbi, maxiter,
-                        z2, r, der2, cmode, palette)
+                        z2, r, der2, cmode, palette, color_waves)
 
-@cuda.jit('void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32)')
-def julia(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette):
+@cuda.jit('void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32, int32)')
+def julia(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette, color_waves):
     x, y = cuda.grid(2)
     if x < device_array.shape[0] and y < device_array.shape[1]:
         z = complex128(topleft + x * xstep - 1j * y * ystep)
@@ -112,7 +113,7 @@ def julia(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmod
             z2 = z.real**2 + z.imag**2
             der2 = der.real**2 + der.imag**2
         set_pixel_color(device_array, x, y, nbi, maxiter,
-                        z2, r, der2, cmode, palette)
+                        z2, r, der2, cmode, palette, color_waves)
 
 fractalmodes = [mandelbrot, julia]
 currentfractalmode = 0
@@ -132,6 +133,7 @@ def create_image(
     juliaxy: complex128,
     cmode: int32,
     palette: int32,
+    color_waves: int32
 ):
     timerstart = timeit.default_timer()
     (screenw, screenh) = window_size
@@ -144,7 +146,7 @@ def create_image(
         math.ceil(screenw / threadsperblock[0]),
         math.ceil(screenh / threadsperblock[1]),
     )
-    fractalmode[blockspergrid, threadsperblock](device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette)
+    fractalmode[blockspergrid, threadsperblock](device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette, color_waves)
     output_array = device_array.copy_to_host()
     sys.stdout.write(
         "Frame calculated in %f s \n" % (timeit.default_timer() - timerstart)
@@ -176,7 +178,7 @@ def create_image_profiling():
     pixel_array = numpy.zeros((512, 512, 3))
     create_image(
         mandelbrot, pixel_array, -2.5, 1.5, -
-        1.5, 1.5, 255, 2, 4, 0.001, complex128(0 + 0j), 0, 0
+        1.5, 1.5, 255, 2, 4, 0.001, complex128(0 + 0j), 0, 0, 1
     )
 
 
@@ -193,7 +195,7 @@ def pygamemain():
 
     def reset():
         sys.stdout.write("Reset \n")
-        global xcenter, ycenter, yheight, maxiterations, power, escaper, epsilon, currentfractalmode, currentcolormode, currentpalette
+        global xcenter, ycenter, yheight, maxiterations, power, escaper, epsilon, currentfractalmode, currentcolormode, currentpalette, currentcolor_waves
         xcenter = -0.5
         ycenter = 0
         yheight = 3
@@ -204,6 +206,7 @@ def pygamemain():
         currentfractalmode = 0
         currentcolormode = 0
         currentpalette = 0
+        currentcolor_waves=1
 
     def recalc_size():
         global xwidth, xmin, xmax, ymin, ymax
@@ -246,6 +249,7 @@ def pygamemain():
             juliaxy,
             currentcolormode,
             currentpalette,
+            currentcolor_waves
         )
         pygame.pixelcopy.array_to_surface(screen_surface, output_array)
         pygame.display.flip()
@@ -259,6 +263,12 @@ def pygamemain():
         global currentpalette
         currentpalette = (currentpalette + 1) % nbpalettes
         sys.stdout.write("Palette: %i \n" % currentpalette)
+
+    def changecolor_waves(plusminus):
+        global currentcolor_waves
+        currentcolor_waves = currentcolor_waves + plusminus
+        if currentcolor_waves==0: currentcolor_waves=1
+        sys.stdout.write("Color waves: %f \n" % currentcolor_waves)
 
     def changemaxiterations(factor):
         global maxiterations
@@ -303,7 +313,8 @@ def pygamemain():
         sys.stdout.write("up, down, left, right: pan \n")
         sys.stdout.write("k: color mode (0,%i)\n" % currentcolormode)
         sys.stdout.write("c: color palette (0,%i)\n" % currentpalette)
-        sys.stdout.write("i, max_iterations (100,%i)\n" % maxiterations)
+        sys.stdout.write("w: color waves (1,%i)\n" % currentcolor_waves)
+        sys.stdout.write("i, max_iterations (1000,%i)\n" % maxiterations)
         sys.stdout.write("p, power(2,%i)\n" % power)
         sys.stdout.write("r, escape radius(4,%i)\n" % escaper)
         sys.stdout.write("e, epsilon (0.001,%i)\n" % epsilon)
@@ -384,6 +395,11 @@ def pygamemain():
                         changecolormode()
                     case pygame.K_c:
                         changecolorpalette()
+                    case pygame.K_w:
+                        if shift:
+                            changecolor_waves(-1)
+                        else:
+                            changecolor_waves(1)
                     case pygame.K_BACKSPACE:
                         reset()
                     case pygame.K_h:
