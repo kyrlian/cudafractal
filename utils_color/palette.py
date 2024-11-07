@@ -1,7 +1,3 @@
-# Write python code using nvidia cuda to render a mandelbrot fractal.
-# When the user left clicks, zoom in by a factor of 2 into the fractal at the cursor.
-# When the user right clicks, zoom out by a factor of 2.
-
 import math
 from numba import float64
 from math import log
@@ -32,7 +28,7 @@ def set_color_hue(pixel_array, x, y, k):
 
 
 def set_image_color(pixels, x, y, cmode, palette):
-    nbi = x+1
+    nbi = x + 1
     max_iter = pixels.shape[0]
     match cmode:
         case 0:
@@ -43,17 +39,18 @@ def set_image_color(pixels, x, y, cmode, palette):
             # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
             k = 1 / nbi
         case 3:
-            k = math.sin(nbi/max_iter) / 2 + 0.5
+            k = math.sin(nbi / max_iter) / 2 + 0.5
     match palette:
         case 0:  # hue
             set_color_hue(pixels, x, y, k)
         case 1:  # graysscale
             pixels[x, y] = (k * 255, k * 255, k * 255)
-        case 2 : 
+        case 2:
             r = math.sin(k) / 2 + 0.5
             g = math.sin(2 * k) / 2 + 0.5
             b = math.sin(4 * k) / 2 + 0.5
             pixels[x, y] = (r * 255, g * 255, b * 255)
+
 
 currentcolormode = 0
 nbcolormodes = 4

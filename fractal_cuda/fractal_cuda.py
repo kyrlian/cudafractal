@@ -1,3 +1,5 @@
+#!python3
+
 # Based on fractal-cuda-simple.py
 # with more keyboard controls, and color mode choices
 
@@ -7,36 +9,51 @@ import cProfile
 import math
 import timeit
 import sys
-from numba import float64, complex128, int32, uint32
-from math import log, sin
+from numba import float64, complex128, int32
+from math import log
 import pygame
 import numpy
 from numba import cuda
 
-@cuda.jit('void(uint32[:,:], int32, int32, float64, float64, float64)', device=True)
-def set_color_hsv(device_array, x, y, h, s, v ):
+
+@cuda.jit("void(uint32[:,:], int32, int32, float64, float64, float64)", device=True)
+def set_color_hsv(device_array, x, y, h, s, v):
     # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
     if s:
-        if h == 1.0: h = 0.0
-        i = int(h*6.0)
-        f = h*6.0 - i
-        
+        if h == 1.0:
+            h = 0.0
+        i = int(h * 6.0)
+        f = h * 6.0 - i
+
         w = v * (1.0 - s)
         q = v * (1.0 - s * f)
         t = v * (1.0 - s * (1.0 - f))
-        
-        if i==0: r,g,b = v, t, w
-        if i==1: r,g,b = q, v, w
-        if i==2: r,g,b = w, v, t
-        if i==3: r,g,b = w, q, v
-        if i==4: r,g,b = t, w, v
-        if i==5: r,g,b = v, w, q
-    else: r, g, b=v, v, v
-    device_array[x, y] = (int(r * 255)*256 + int(g * 255))*256 + int(b * 255)
 
-@cuda.jit('void(uint32[:,:], int32, int32, int32, int32, float64, float64, float64, int32, int32, int32)', device=True)
-def set_pixel_color(device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palette, color_waves):
+        if i == 0:
+            r, g, b = v, t, w
+        if i == 1:
+            r, g, b = q, v, w
+        if i == 2:
+            r, g, b = w, v, t
+        if i == 3:
+            r, g, b = w, q, v
+        if i == 4:
+            r, g, b = t, w, v
+        if i == 5:
+            r, g, b = v, w, q
+    else:
+        r, g, b = v, v, v
+    device_array[x, y] = (int(r * 255) * 256 + int(g * 255)) * 256 + int(b * 255)
+
+
+@cuda.jit(
+    "void(uint32[:,:], int32, int32, int32, int32, float64, float64, float64, int32, int32, int32)",
+    device=True,
+)
+def set_pixel_color(
+    device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palette, color_waves
+):
     if z2 > r:
         # first calculate k based on color mode
         # k should be 0-1
@@ -45,7 +62,7 @@ def set_pixel_color(device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palet
                 mic = max_iter / color_waves
                 k = float64(nbi % mic / mic)
             case 1:
-                k = float64(nbi/max_iter)
+                k = float64(nbi / max_iter)
             case 2:
                 k = log(float64(nbi)) / log(float64(max_iter))
             case 3:
@@ -54,10 +71,10 @@ def set_pixel_color(device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palet
                 k = float64(r) / float64(z2)
             case 4:
                 k = log(float64(r)) / log(float64(z2))
-            case 5: 
-                #k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES
-                #k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES
-                k = 1/z2
+            case 5:
+                # k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES
+                # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES
+                k = 1 / z2
         # then calculate color from k
         match palette:
             case 0:  # hue
@@ -65,24 +82,41 @@ def set_pixel_color(device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palet
             case 1:  # grayscale
                 # pixels[x, y] = (k * 255, k * 255, k * 255)
                 kk = int(k * 255)
-                device_array[x, y] = (kk*256 + kk)*256 + kk
+                device_array[x, y] = (kk * 256 + kk) * 256 + kk
     else:
         device_array[x, y] = 0
 
-#TODO use list of color mode names
+
+# TODO use list of color mode names
 currentcolormode = 0
 nbcolormodes = 6
 currentpalette = 0
 nbpalettes = 2
 
-#TODO allow to change palette length
+# TODO allow to change palette length
 
-@cuda.jit('void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32, int32)')
-def mandelbrot(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette, color_waves):
+
+@cuda.jit(
+    "void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32, int32)"
+)
+def mandelbrot(
+    device_array,
+    topleft,
+    xstep,
+    ystep,
+    maxiter,
+    p,
+    r,
+    eps,
+    juliaxy,
+    cmode,
+    palette,
+    color_waves,
+):
     x, y = cuda.grid(2)
     if x < device_array.shape[0] and y < device_array.shape[1]:
         c = complex128(topleft + x * xstep - 1j * y * ystep)
-        z = c 
+        z = c
         nbi = 0
         z2 = 0
         der = complex128(1 + 0j)
@@ -93,11 +127,28 @@ def mandelbrot(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy,
             nbi += 1
             z2 = z.real**2 + z.imag**2
             der2 = der.real**2 + der.imag**2
-        set_pixel_color(device_array, x, y, nbi, maxiter,
-                        z2, r, der2, cmode, palette, color_waves)
+        set_pixel_color(
+            device_array, x, y, nbi, maxiter, z2, r, der2, cmode, palette, color_waves
+        )
 
-@cuda.jit('void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32, int32)')
-def julia(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette, color_waves):
+
+@cuda.jit(
+    "void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32, int32)"
+)
+def julia(
+    device_array,
+    topleft,
+    xstep,
+    ystep,
+    maxiter,
+    p,
+    r,
+    eps,
+    juliaxy,
+    cmode,
+    palette,
+    color_waves,
+):
     x, y = cuda.grid(2)
     if x < device_array.shape[0] and y < device_array.shape[1]:
         z = complex128(topleft + x * xstep - 1j * y * ystep)
@@ -112,8 +163,10 @@ def julia(device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmod
             nbi += 1
             z2 = z.real**2 + z.imag**2
             der2 = der.real**2 + der.imag**2
-        set_pixel_color(device_array, x, y, nbi, maxiter,
-                        z2, r, der2, cmode, palette, color_waves)
+        set_pixel_color(
+            device_array, x, y, nbi, maxiter, z2, r, der2, cmode, palette, color_waves
+        )
+
 
 fractalmodes = [mandelbrot, julia]
 currentfractalmode = 0
@@ -133,7 +186,7 @@ def create_image(
     juliaxy: complex128,
     cmode: int32,
     palette: int32,
-    color_waves: int32
+    color_waves: int32,
 ):
     timerstart = timeit.default_timer()
     (screenw, screenh) = window_size
@@ -146,7 +199,20 @@ def create_image(
         math.ceil(screenw / threadsperblock[0]),
         math.ceil(screenh / threadsperblock[1]),
     )
-    fractalmode[blockspergrid, threadsperblock](device_array, topleft, xstep, ystep, maxiter, p, r, eps, juliaxy, cmode, palette, color_waves)
+    fractalmode[blockspergrid, threadsperblock](
+        device_array,
+        topleft,
+        xstep,
+        ystep,
+        maxiter,
+        p,
+        r,
+        eps,
+        juliaxy,
+        cmode,
+        palette,
+        color_waves,
+    )
     output_array = device_array.copy_to_host()
     sys.stdout.write(
         "Frame calculated in %f s \n" % (timeit.default_timer() - timerstart)
@@ -177,8 +243,20 @@ def compute_threadsperblock():
 def create_image_profiling():
     pixel_array = numpy.zeros((512, 512, 3))
     create_image(
-        mandelbrot, pixel_array, -2.5, 1.5, -
-        1.5, 1.5, 255, 2, 4, 0.001, complex128(0 + 0j), 0, 0, 1
+        mandelbrot,
+        pixel_array,
+        -2.5,
+        1.5,
+        -1.5,
+        1.5,
+        255,
+        2,
+        4,
+        0.001,
+        complex128(0 + 0j),
+        0,
+        0,
+        1,
     )
 
 
@@ -195,7 +273,18 @@ def pygamemain():
 
     def reset():
         sys.stdout.write("Reset \n")
-        global xcenter, ycenter, yheight, maxiterations, power, escaper, epsilon, currentfractalmode, currentcolormode, currentpalette, currentcolor_waves
+        global \
+            xcenter, \
+            ycenter, \
+            yheight, \
+            maxiterations, \
+            power, \
+            escaper, \
+            epsilon, \
+            currentfractalmode, \
+            currentcolormode, \
+            currentpalette, \
+            currentcolor_waves
         xcenter = -0.5
         ycenter = 0
         yheight = 3
@@ -206,7 +295,7 @@ def pygamemain():
         currentfractalmode = 0
         currentcolormode = 0
         currentpalette = 0
-        currentcolor_waves=1
+        currentcolor_waves = 1
 
     def recalc_size():
         global xwidth, xmin, xmax, ymin, ymax
@@ -220,8 +309,7 @@ def pygamemain():
         global xcenter, ycenter, yheight
         (mouseX, mouseY) = mousePos
         xcenter = xmin + mouseX * (xmax - xmin) / display_width
-        ycenter = ymin + (display_heigth - mouseY) * \
-            (ymax - ymin) / display_heigth
+        ycenter = ymin + (display_heigth - mouseY) * (ymax - ymin) / display_heigth
         yheight /= zoomrate
         sys.stdout.write(
             "Zoom %f,%f, (%f,%f), factor %f \n"
@@ -249,7 +337,7 @@ def pygamemain():
             juliaxy,
             currentcolormode,
             currentpalette,
-            currentcolor_waves
+            currentcolor_waves,
         )
         pygame.pixelcopy.array_to_surface(screen_surface, output_array)
         pygame.display.flip()
@@ -267,7 +355,8 @@ def pygamemain():
     def changecolor_waves(plusminus):
         global currentcolor_waves
         currentcolor_waves = currentcolor_waves + plusminus
-        if currentcolor_waves==0: currentcolor_waves=1
+        if currentcolor_waves == 0:
+            currentcolor_waves = 1
         sys.stdout.write("Color waves: %f \n" % currentcolor_waves)
 
     def changemaxiterations(factor):
@@ -298,9 +387,8 @@ def pygamemain():
         (mouseX, mouseY) = pos
         currentfractalmode = (currentfractalmode + 1) % len(fractalmodes)
         juliax = xmin + mouseX * (xmax - xmin) / display_width
-        juliay = ymin + (display_heigth - mouseY) * \
-            (ymax - ymin) / display_heigth
-        juliaxy = complex128(juliax + juliay*1j)
+        juliay = ymin + (display_heigth - mouseY) * (ymax - ymin) / display_heigth
+        juliaxy = complex128(juliax + juliay * 1j)
         sys.stdout.write(
             "Fractal mode: %s \n" % fractalmodes[currentfractalmode].__name__
         )
@@ -325,8 +413,7 @@ def pygamemain():
         )
         sys.stdout.write("backspace: reset \n")
         sys.stdout.write("q: quit \n")
-        sys.stdout.write("current x,y,h: %f, %f, %f \n" %
-                         (xcenter, ycenter, yheight))
+        sys.stdout.write("current x,y,h: %f, %f, %f \n" % (xcenter, ycenter, yheight))
 
     # Initialize pygame
     pygame.init()
@@ -424,10 +511,14 @@ def pygamemain():
     sys.stdout.write("So Long, and Thanks for All the Fish!\n")
 
 
-if __name__ == "__main__":
+def main():
     args = sys.argv[1:]
     if len(args) > 0 and args[0] == "--profile":
         # https://docs.python.org/3.8/library/profile.html#module-cProfile
         cProfile.run("create_image_profiling()", sort="cumtime")
     else:
         pygamemain()
+
+
+if __name__ == "__main__":
+    main()

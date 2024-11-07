@@ -1,3 +1,5 @@
+#!python3
+
 # Write python code using nvidia cuda to render a mandelbrot fractal.
 # When the user left clicks, zoom in by a factor of 2 into the fractal at the cursor.
 # When the user right clicks, zoom out by a factor of 2.
@@ -34,7 +36,7 @@ def set_color_hue(pixel_array, x, y, k):
             r, g, b = fract, 0, 1
         case 5:  # MAGENTA to RED
             r, g, b = 1, 0, 1 - fract
-    packed = (int(r * 255)*256 + int(g * 255))*256 + int(b * 255)
+    packed = (int(r * 255) * 256 + int(g * 255)) * 256 + int(b * 255)
     pixel_array[x, y] = packed
 
 
@@ -47,7 +49,9 @@ def set_image_color(pixels, x, y, nbi, max_iter, z2, r, der2, cmode, palette):
                 k = log(float64(nbi)) / log(float64(max_iter))
             case 2:
                 # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
-                k = float64(r) / float64(z2)  # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
+                k = float64(r) / float64(
+                    z2
+                )  # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
             case 3:
                 k = log(float64(r)) / log(float64(z2))
             case 4:
@@ -157,7 +161,17 @@ def pygamemain():
 
     def reset():
         sys.stdout.write("Reset \n")
-        global xcenter, ycenter, yheight, maxiterations, power, escaper, epsilon, currentfractalmode, currentcolormode, currentpalette
+        global \
+            xcenter, \
+            ycenter, \
+            yheight, \
+            maxiterations, \
+            power, \
+            escaper, \
+            epsilon, \
+            currentfractalmode, \
+            currentcolormode, \
+            currentpalette
         xcenter = -0.5
         ycenter = 0
         yheight = 3
@@ -368,10 +382,14 @@ def pygamemain():
     sys.stdout.write("So Long, and Thanks for All the Fish!\n")
 
 
-if __name__ == "__main__":
+def main():
     args = sys.argv[1:]
     if len(args) > 0 and args[0] == "--profile":
         # https://docs.python.org/3.8/library/profile.html#module-cProfile
         cProfile.run("create_image_profiling()", sort="cumtime")
     else:
         pygamemain()
+
+
+if __name__ == "__main__":
+    main()
