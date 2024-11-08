@@ -1,51 +1,78 @@
-import math
-from numba import float64
 from math import log
+from numba import float64
+
+NB_COLOR_MODES = 6
+NB_PALETTES = 2
 
 
-def set_color_hue(pixel_array, x, y, k):
-    # k should be [0:1]
-    k6 = 6.0 * k
-    fk = math.floor(k6)
-    fract = k6 - fk
+def set_color_rgb(device_array, x, y, r, g, b):
+    # r, g, b should be [0:255]
+    packed = (r * 256 + g) * 256 + b
+    device_array[x, y] = packed
+
+
+def set_color_hsv(device_array, x, y, h, s, v):
+    # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
-    match fk:
-        case 0:  # RED to YELLOW
-            r, g, b = 1, fract, 0
-        case 1:  # YELLOW to GREEN
-            r, g, b = 1 - fract, 1, 0
-        case 2:  # GREEN to CYAN
-            r, g, b = 0, 1, fract
-        case 3:  # CYAN to BLUE
-            r, g, b = 0, 1 - fract, 1
-        case 4:  # BLUE to MAGENTA
-            r, g, b = fract, 0, 1
-        case 5:  # MAGENTA to RED
-            r, g, b = 1, 0, 1 - fract
-    packed = (int(r * 255) * 256 + int(g * 255)) * 256 + int(b * 255)
-    pixel_array[x, y] = packed
+    if s > 0:
+        if h == 1.0:
+            h = 0.0
+        i = int(h * 6.0)
+        f = h * 6.0 - i
+
+        w = v * (1.0 - s)
+        q = v * (1.0 - s * f)
+        t = v * (1.0 - s * (1.0 - f))
+
+        if i == 0:
+            r, g, b = v, t, w
+        if i == 1:
+            r, g, b = q, v, w
+        if i == 2:
+            r, g, b = w, v, t
+        if i == 3:
+            r, g, b = w, q, v
+        if i == 4:
+            r, g, b = t, w, v
+        if i == 5:
+            r, g, b = v, w, q
+    else:
+        r, g, b = v, v, v
+    set_color_rgb(device_array, x, y, int(r * 255), int(g * 255), int(b * 255))
 
 
-def set_image_color(pixels, x, y, nbi, max_iter, z2, r, der2, cmode, palette):
+def set_pixel_color(
+    device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palette, color_waves
+):
     if z2 > r:
+        # first calculate k based on color mode
+        # k should be 0-1
         match cmode:
             case 0:
-                k = float64(nbi) / float64(max_iter)
+                mic = max_iter / color_waves
+                k = float64(nbi % mic / mic)
             case 1:
-                k = log(float64(nbi)) / log(float64(max_iter))
+                k = float64(nbi / max_iter)
             case 2:
-                # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
-                k = float64(r) / float64(
-                    z2
-                )  # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
+                k = log(float64(nbi)) / log(float64(max_iter))
             case 3:
-                k = log(float64(r)) / log(float64(z2))
+                # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
+                # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
+                k = float64(r) / float64(z2)
             case 4:
-                k = math.sin(log(z2)) / 2 + 0.5
+                k = log(float64(r)) / log(float64(z2))
+            case 5:
+                # k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
+                # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
+                k = 1 / z2
+        # then calculate color from k
         match palette:
             case 0:  # hue
-                set_color_hue(pixels, x, y, k)
-            case 1:  # graysscale
-                pixels[x, y] = (k * 255, k * 255, k * 255)
+                set_color_hsv(device_array, x, y, k, 1, 1)
+            case 1:  # grayscale
+                kk = int(k * 255)
+                device_array[x, y] = (kk * 256 + kk) * 256 + kk
+            case 3:  # custom palette k to rgb
+                pass
     else:
-        pixels[x, y] = (0, 0, 0)
+        device_array[x, y] = 0

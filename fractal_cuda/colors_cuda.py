@@ -5,17 +5,19 @@ from numba import cuda
 NB_COLOR_MODES = 6
 NB_PALETTES = 2
 
+
 @cuda.jit("void(uint32[:,:], int32, int32, int32, int32, int32)", device=True)
 def set_color_rgb(device_array, x, y, r, g, b):
     # r, g, b should be [0:255]
     packed = (r * 256 + g) * 256 + b
     device_array[x, y] = packed
 
+
 @cuda.jit("void(uint32[:,:], int32, int32, float64, float64, float64)", device=True)
 def set_color_hsv(device_array, x, y, h, s, v):
     # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
-    if s>0:
+    if s > 0:
         if h == 1.0:
             h = 0.0
         i = int(h * 6.0)
@@ -39,15 +41,13 @@ def set_color_hsv(device_array, x, y, h, s, v):
             r, g, b = v, w, q
     else:
         r, g, b = v, v, v
-    set_color_rgb(device_array, x, y, int(r * 255) , int(g * 255) , int(b * 255))
-    # device_array[x, y] = (int(r * 255) * 256 + int(g * 255)) * 256 + int(b * 255)
+    set_color_rgb(device_array, x, y, int(r * 255), int(g * 255), int(b * 255))
 
 
 @cuda.jit(
     "void(uint32[:,:], int32, int32, int32, int32, float64, float64, float64, int32, int32, int32)",
     device=True,
 )
-
 def set_pixel_color(
     device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palette, color_waves
 ):
@@ -79,7 +79,7 @@ def set_pixel_color(
             case 1:  # grayscale
                 kk = int(k * 255)
                 device_array[x, y] = (kk * 256 + kk) * 256 + kk
-            case 3: # custom palette k to rgb
+            case 3:  # custom palette k to rgb
                 pass
     else:
         device_array[x, y] = 0

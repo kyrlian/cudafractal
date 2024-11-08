@@ -6,6 +6,7 @@ from numba import complex128
 import timeit
 from fractal_cuda.fractal_cuda import FRACTAL_MODES
 
+
 def create_image(
     WINDOW_SIZE,
     xmax,

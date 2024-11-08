@@ -2,6 +2,7 @@ from numba import complex128
 from numba import cuda
 from fractal_cuda.colors_cuda import set_pixel_color
 
+
 @cuda.jit(
     "void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32, int32)"
 )
@@ -72,5 +73,6 @@ def julia(
         set_pixel_color(
             device_array, x, y, nbi, maxiter, z2, r, der2, cmode, palette, color_waves
         )
+
 
 FRACTAL_MODES = [mandelbrot, julia]
