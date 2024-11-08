@@ -4,7 +4,7 @@ import numpy
 from numba import cuda
 from numba import complex128
 import timeit
-
+from fractal_cuda.fractal_cuda import FRACTAL_MODES
 
 def create_image(
     WINDOW_SIZE,
@@ -35,7 +35,8 @@ def create_image(
         math.ceil(screenw / threadsperblock[0]),
         math.ceil(screenh / threadsperblock[1]),
     )
-    fractalmode[blockspergrid, threadsperblock](
+    fractalmethod = FRACTAL_MODES[fractalmode]
+    fractalmethod[blockspergrid, threadsperblock](
         device_array,
         topleft,
         xstep,

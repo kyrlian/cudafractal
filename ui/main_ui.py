@@ -5,7 +5,7 @@ import pygame
 
 from ui.appState import AppState
 from fractal_cuda.utils_cuda import create_image
-
+from fractal_cuda.fractal_cuda import FRACTAL_MODES
 
 def pygamemain():
     def redraw(screen_surface, appstate):
@@ -17,14 +17,14 @@ def pygamemain():
             appstate.ymin,
             appstate.ymax,
             appstate.fractalmode,
-            appstate.maxiter,
+            appstate.maxiterations,
             appstate.power,
             appstate.escaper,
             appstate.epsilon,
             appstate.juliaxy,
-            appstate.currentcolormode,
-            appstate.currentpalette,
-            appstate.currentcolor_waves,
+            appstate.colormode,
+            appstate.palette,
+            appstate.colorwaves,
         )
         pygame.pixelcopy.array_to_surface(screen_surface, output_array)
         pygame.display.flip()
@@ -35,16 +35,16 @@ def pygamemain():
         sys.stdout.write("z, left click: zoom in\n")
         sys.stdout.write("s, right click: zoom out \n")
         sys.stdout.write("up, down, left, right: pan \n")
-        sys.stdout.write(f"k: color mode (0,{appstate.currentcolormode})\n")
-        sys.stdout.write(f"c: color palette (0,{appstate.currentpalette})\n")
-        sys.stdout.write(f"w: color waves (1,{appstate.currentcolor_waves})\n")
+        sys.stdout.write(f"k: color mode (0,{appstate.colormode})\n")
+        sys.stdout.write(f"c: color palette (0,{appstate.palette})\n")
+        sys.stdout.write(f"w: color waves (1,{appstate.colorwaves})\n")
         sys.stdout.write(f"i, max_iterations (1000,{appstate.maxiterations})\n")
         sys.stdout.write(f"p, power(2,{appstate.power})\n")
         sys.stdout.write(f"r, escape radius(4,{appstate.escaper})\n")
         sys.stdout.write(f"e, epsilon (0.001,{appstate.epsilon})\n")
         sys.stdout.write(f"a: epsilon=0 (0.001,{appstate.epsilon})\n")
         sys.stdout.write(
-            f"j, middle click: julia/mandel (mandel,{appstate.FRACTAL_MODES[appstate.currentfractalmode].__name__}\n"
+            f"j, middle click: julia/mandel (mandel,{FRACTAL_MODES[appstate.fractalmode].__name__}\n"
         )
         sys.stdout.write("backspace: reset \n")
         sys.stdout.write("q: quit \n")

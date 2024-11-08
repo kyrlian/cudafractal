@@ -17,12 +17,6 @@ Run with
 fractal
 ```
 
-or
-
-```sh
-fractal_no_cuda
-```
-
 ## Or clone and run with uv
 
 ```sh
@@ -31,11 +25,7 @@ cd fractal-python-cuda
 ```
 Run with 
 ```sh
-uv run fractal_cuda/fractal_cuda.py
-```
-or
-```sh
-uv run fractal_no_cuda/fractal_no_cuda.py
+uv run ui/main_ui.py
 ```
 
 ## Or with pip
@@ -45,9 +35,5 @@ pip install -r requirements.txt
 ```
 Run with 
 ```sh
-python fractal_cuda/fractal_cuda.py
-```
-or
-```sh
-python fractal_no_cuda/fractal_no_cuda.py
+python ui/main_ui.py
 ```
