@@ -2,12 +2,38 @@
 import cProfile
 import sys
 import pygame
+import argparse
 
 from ui.appState import AppState
-from fractal_cuda.utils_cuda import create_image
-from fractal_cuda.fractal_cuda import FRACTAL_MODES
 
-def pygamemain():
+
+def load_driver(cpu_only: bool):
+    if cpu_only:
+        from fractal_no_cuda.utils_no_cuda import create_image
+        from fractal_no_cuda.fractal_no_cuda import FRACTAL_MODES
+
+        return create_image, FRACTAL_MODES
+    else:
+        try:
+            from numba import cuda
+        except Exception:
+            print(f"Error importing numba.cuda: {Exception}")
+        # CUDA_AVAILABLE = cuda.detect()
+        if cuda.is_available():
+            print("cuda detected")
+            from fractal_cuda.utils_cuda import create_image
+            from fractal_cuda.fractal_cuda import FRACTAL_MODES
+
+            return create_image, FRACTAL_MODES
+        else:
+            print("cuda NOT detected")
+            from fractal_no_cuda.utils_no_cuda import create_image
+            from fractal_no_cuda.fractal_no_cuda import FRACTAL_MODES
+
+            return create_image, FRACTAL_MODES
+
+
+def pygamemain(create_image, FRACTAL_MODES):
     def redraw(screen_surface, appstate):
         appstate.recalc_size()
         output_array = create_image(
@@ -30,25 +56,23 @@ def pygamemain():
         pygame.display.flip()
 
     def printhelp(appstate):
-        sys.stdout.write("Help: \n")
-        sys.stdout.write("key, role, (default, current)\n")
-        sys.stdout.write("z, left click: zoom in\n")
-        sys.stdout.write("s, right click: zoom out \n")
-        sys.stdout.write("up, down, left, right: pan \n")
-        sys.stdout.write(f"k: color mode (0,{appstate.colormode})\n")
-        sys.stdout.write(f"c: color palette (0,{appstate.palette})\n")
-        sys.stdout.write(f"w: color waves (1,{appstate.colorwaves})\n")
-        sys.stdout.write(f"i, max_iterations (1000,{appstate.maxiterations})\n")
-        sys.stdout.write(f"p, power(2,{appstate.power})\n")
-        sys.stdout.write(f"r, escape radius(4,{appstate.escaper})\n")
-        sys.stdout.write(f"e, epsilon (0.001,{appstate.epsilon})\n")
-        sys.stdout.write(f"a: epsilon=0 (0.001,{appstate.epsilon})\n")
-        sys.stdout.write(
-            f"j, middle click: julia/mandel (mandel,{FRACTAL_MODES[appstate.fractalmode].__name__}\n"
-        )
-        sys.stdout.write("backspace: reset \n")
-        sys.stdout.write("q: quit \n")
-        sys.stdout.write("current x,y,h: {xcenter}, {ycenter}, {yheight}\n")
+        print("Help: ")
+        print("key(s): role, (default, current)")
+        print("z, left click: zoom in")
+        print("s, right click: zoom out")
+        print("up, down, left, right: pan")
+        print(f"k:  color mode (0, {appstate.colormode})")
+        print(f"c:  color palette (0, {appstate.palette})")
+        print(f"w:  color waves (1, {appstate.colorwaves})")
+        print(f"i:  max_iterations (1000, {appstate.maxiterations})")
+        print(f"p:  power(2, {appstate.power})")
+        print(f"r:  escape radius(4, {appstate.escaper})")
+        print(f"e:  epsilon (0.001, {appstate.epsilon})")
+        print(f"a:  epsilon=0 (0.001, {appstate.epsilon})")
+        print(f"j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_MODES[appstate.fractalmode].__name__})")
+        print("backspace: reset")
+        print("q: quit")
+        print(f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}")
 
     # Initialize pygame
     pygame.init()
@@ -141,16 +165,22 @@ def pygamemain():
             # pygame.mouse.get_pressed()[0]
     # Quit pygame
     pygame.quit()
-    sys.stdout.write("So Long, and Thanks for All the Fish!\n")
+    print("So Long, and Thanks for All the Fish!")
 
 
 def main():
-    args = sys.argv[1:]
-    if len(args) > 0 and args[0] == "--profile":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-p", "--profile", help="activate profiling", action="store_true"
+    )
+    parser.add_argument("-c", "--cpu", help="compute on cpu only", action="store_true")
+    args = parser.parse_args()
+    create_image, FRACTAL_MODES = load_driver(args.cpu)
+    if args.profile:
         # https://docs.python.org/3.8/library/profile.html#module-cProfile
-        cProfile.run("create_image_profiling()", sort="cumtime")
+        cProfile.run("pygamemain(create_image, FRACTAL_MODES)", sort="cumtime")
     else:
-        pygamemain()
+        pygamemain(create_image, FRACTAL_MODES)
 
 
 if __name__ == "__main__":

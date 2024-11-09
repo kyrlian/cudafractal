@@ -1,5 +1,4 @@
 import math
-import sys
 from numba import float64, complex128
 from dataclasses import dataclass
 
@@ -31,7 +30,7 @@ class AppState:
     WINDOW_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGTH
 
     def reset(self):
-        sys.stdout.write("Reset \n")
+        print("Reset ")
         self.__init__()
 
     def zoom_in(self, mousePos=None):
@@ -53,42 +52,42 @@ class AppState:
             / self.DISPLAY_HEIGTH
         )
         self.yheight /= zoomrate
-        sys.stdout.write(
-            f"Zoom {mouseX},{mouseY}, ({self.xcenter},{self.ycenter}), factor {zoomrate}\n"
+        print(
+            f"Zoom {mouseX},{mouseY}, ({self.xcenter},{self.ycenter}), factor {zoomrate}"
         )
 
     def changecolormode(self):
         self.colormode = (self.colormode + 1) % NB_COLOR_MODES
-        sys.stdout.write(f"Color mode: {self.colormode}\n")
+        print(f"Color mode: {self.colormode}")
 
     def changecolorpalette(self):
         self.palette = (self.palette + 1) % NB_PALETTES
-        sys.stdout.write(f"Palette: {self.palette}\n")
+        print(f"Palette: {self.palette}")
 
     def changecolor_waves(self, plusminus):
         self.colorwaves = self.colorwaves + plusminus
         if self.colorwaves == 0:
             self.colorwaves = 1
-        sys.stdout.write(f"Color waves: {self.colorwaves}\n")
+        print(f"Color waves: {self.colorwaves}")
 
     def changemaxiterations(self, factor):
         self.maxiterations = int(self.maxiterations * factor)
-        sys.stdout.write(f"Max iterations: {self.maxiterations}\n")
+        print(f"Max iterations: {self.maxiterations}")
 
     def changepower(self, plusminus):
         self.power = (self.power + plusminus) % 16
-        sys.stdout.write(f"Power: {self.power}\n")
+        print(f"Power: {self.power}")
 
     def changeescaper(self, factor):
         self.escaper = int(self.escaper * factor)
-        sys.stdout.write(f"Escape R: {self.escaper}\n")
+        print(f"Escape R: {self.escaper}")
 
     def changeepsilon(self, factor):
         if factor == self.epsilon == 0:
             self.epsilon = 0.001
         else:
             self.epsilon *= factor
-        sys.stdout.write(f"Epsilon: {self.epsilon} \n")
+        print(f"Epsilon: {self.epsilon}")
 
     def changefractalmode(self, pos):
         (mouseX, mouseY) = pos
@@ -101,8 +100,8 @@ class AppState:
             / self.DISPLAY_HEIGTH
         )
         self.juliaxy = complex128(juliax + juliay * 1j)
-        sys.stdout.write(
-            f"Fractal mode: {FRACTAL_MODES[self.fractalmode].__name__}\n"
+        print(
+            f"Fractal mode: {FRACTAL_MODES[self.fractalmode].__name__}"
         )
 
     def recalc_size(self):

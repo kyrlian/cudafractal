@@ -214,7 +214,7 @@ def create_image(
         color_waves,
     )
     output_array = device_array.copy_to_host()
-    sys.stdout.write(
+    print(
         "Frame calculated in %f s \n" % (timeit.default_timer() - timerstart)
     )
     return output_array
@@ -272,7 +272,7 @@ def pygamemain():
     panspeed = 0.3  # ratio of xmax-xmin
 
     def reset():
-        sys.stdout.write("Reset \n")
+        print("Reset ")
         global \
             xcenter, \
             ycenter, \
@@ -311,7 +311,7 @@ def pygamemain():
         xcenter = xmin + mouseX * (xmax - xmin) / display_width
         ycenter = ymin + (display_heigth - mouseY) * (ymax - ymin) / display_heigth
         yheight /= zoomrate
-        sys.stdout.write(
+        print(
             "Zoom %f,%f, (%f,%f), factor %f \n"
             % (mouseX, mouseY, xcenter, ycenter, zoomrate)
         )
@@ -345,34 +345,34 @@ def pygamemain():
     def changecolormode():
         global currentcolormode
         currentcolormode = (currentcolormode + 1) % nbcolormodes
-        sys.stdout.write("Color mode: %i \n" % currentcolormode)
+        print("Color mode: %i \n" % currentcolormode)
 
     def changecolorpalette():
         global currentpalette
         currentpalette = (currentpalette + 1) % nbpalettes
-        sys.stdout.write("Palette: %i \n" % currentpalette)
+        print("Palette: %i \n" % currentpalette)
 
     def changecolor_waves(plusminus):
         global currentcolor_waves
         currentcolor_waves = currentcolor_waves + plusminus
         if currentcolor_waves == 0:
             currentcolor_waves = 1
-        sys.stdout.write("Color waves: %f \n" % currentcolor_waves)
+        print("Color waves: %f \n" % currentcolor_waves)
 
     def changemaxiterations(factor):
         global maxiterations
         maxiterations = int(maxiterations * factor)
-        sys.stdout.write("Max iterations: %f \n" % maxiterations)
+        print("Max iterations: %f \n" % maxiterations)
 
     def changepower(plusminus):
         global power
         power = (power + plusminus) % 16
-        sys.stdout.write("Power: %f \n" % power)
+        print("Power: %f \n" % power)
 
     def changeescaper(factor):
         global escaper
         escaper = int(escaper * factor)
-        sys.stdout.write("Escape R: %f \n" % escaper)
+        print("Escape R: %f \n" % escaper)
 
     def changeepsilon(factor):
         global epsilon
@@ -380,7 +380,7 @@ def pygamemain():
             epsilon = 0.001
         else:
             epsilon *= factor
-        sys.stdout.write("Epsilon: %f \n" % epsilon)
+        print("Epsilon: %f \n" % epsilon)
 
     def changefractalmode(pos):
         global currentfractalmode, juliaxy
@@ -389,31 +389,31 @@ def pygamemain():
         juliax = xmin + mouseX * (xmax - xmin) / display_width
         juliay = ymin + (display_heigth - mouseY) * (ymax - ymin) / display_heigth
         juliaxy = complex128(juliax + juliay * 1j)
-        sys.stdout.write(
+        print(
             "Fractal mode: %s \n" % fractalmodes[currentfractalmode].__name__
         )
 
     def printhelp():
-        sys.stdout.write("Help: \n")
-        sys.stdout.write("key, role, (default, current)\n")
-        sys.stdout.write("z, left click: zoom in\n")
-        sys.stdout.write("s, right click: zoom out \n")
-        sys.stdout.write("up, down, left, right: pan \n")
-        sys.stdout.write("k: color mode (0,%i)\n" % currentcolormode)
-        sys.stdout.write("c: color palette (0,%i)\n" % currentpalette)
-        sys.stdout.write("w: color waves (1,%i)\n" % currentcolor_waves)
-        sys.stdout.write("i, max_iterations (1000,%i)\n" % maxiterations)
-        sys.stdout.write("p, power(2,%i)\n" % power)
-        sys.stdout.write("r, escape radius(4,%i)\n" % escaper)
-        sys.stdout.write("e, epsilon (0.001,%i)\n" % epsilon)
-        sys.stdout.write("a: epsilon=0 (0.001,%i)\n" % epsilon)
-        sys.stdout.write(
+        print("Help: ")
+        print("key, role, (default, current)")
+        print("z, left click: zoom in")
+        print("s, right click: zoom out ")
+        print("up, down, left, right: pan ")
+        print("k: color mode (0,%i)\n" % currentcolormode)
+        print("c: color palette (0,%i)\n" % currentpalette)
+        print("w: color waves (1,%i)\n" % currentcolor_waves)
+        print("i, max_iterations (1000,%i)\n" % maxiterations)
+        print("p, power(2,%i)\n" % power)
+        print("r, escape radius(4,%i)\n" % escaper)
+        print("e, epsilon (0.001,%i)\n" % epsilon)
+        print("a: epsilon=0 (0.001,%i)\n" % epsilon)
+        print(
             "j, middle click: julia/mandel (mandel,%s)\n"
             % fractalmodes[currentfractalmode].__name__
         )
-        sys.stdout.write("backspace: reset \n")
-        sys.stdout.write("q: quit \n")
-        sys.stdout.write("current x,y,h: %f, %f, %f \n" % (xcenter, ycenter, yheight))
+        print("backspace: reset ")
+        print("q: quit ")
+        print("current x,y,h: %f, %f, %f \n" % (xcenter, ycenter, yheight))
 
     # Initialize pygame
     pygame.init()
@@ -508,7 +508,7 @@ def pygamemain():
             # pygame.mouse.get_pressed()[0]
     # Quit pygame
     pygame.quit()
-    sys.stdout.write("So Long, and Thanks for All the Fish!\n")
+    print("So Long, and Thanks for All the Fish!")
 
 
 def main():

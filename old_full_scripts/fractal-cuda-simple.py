@@ -66,7 +66,7 @@ def create_image(window_size, xmin, xmax, ymin, ymax, max_iter):
     )
     mandelbrot_cuda[blockspergrid, threadsperblock](device_array, topleft, xstride, ystride, max_iter)
     output_array = device_array.copy_to_host()
-    sys.stdout.write(
+    print(
         "\r" +
         "Frame calculated in %f s" % (timeit.default_timer() - timerstart)
     )
@@ -105,7 +105,7 @@ zoomrate = 2
 
 
 def reset_size():
-    sys.stdout.write("Reset \n")
+    print("Reset ")
     global xcenter, ycenter, yheight
     xcenter = -0.5
     ycenter = 0
@@ -127,7 +127,7 @@ def zoom(pos, zoomrate):
     xcenter = xmin + mouseX * (xmax - xmin) / display_width
     ycenter = ymin + (display_heigth - mouseY) * (ymax - ymin) / display_heigth
     yheight /= zoomrate
-    sys.stdout.write(
+    print(
         "Zoom %f,%f, (%f,%f), factor %f \n"
         % (mouseX, mouseY, xcenter, ycenter, zoomrate)
     )

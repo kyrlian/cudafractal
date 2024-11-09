@@ -61,13 +61,13 @@ nbpalettes = 3
 def changecolormode():
     global currentcolormode
     currentcolormode = (currentcolormode + 1) % nbcolormodes
-    sys.stdout.write("Color mode: %i \n" % currentcolormode)
+    print("Color mode: %i \n" % currentcolormode)
 
 
 def changecolorpalette():
     global currentpalette
     currentpalette = (currentpalette + 1) % nbpalettes
-    sys.stdout.write("Palette: %i \n" % currentpalette)
+    print("Palette: %i \n" % currentpalette)
 
 
 def redraw(pixel_array):

@@ -1,5 +1,4 @@
 import math
-import sys
 import numpy
 from numba import cuda
 from numba import complex128
@@ -23,8 +22,7 @@ def create_image(
     currentpalette,
     currentcolor_waves,
 ):
-    cuda.detect()
-
+    
     timerstart = timeit.default_timer()
     (screenw, screenh) = WINDOW_SIZE
     xstep = abs(xmax - xmin) / screenw
@@ -52,7 +50,7 @@ def create_image(
         currentcolor_waves,
     )
     output_array = device_array.copy_to_host()
-    sys.stdout.write(f"Frame calculated in {(timeit.default_timer() - timerstart)}s\n")
+    print(f"Frame calculated in {(timeit.default_timer() - timerstart)}s")
     return output_array
 
 

@@ -1,9 +1,27 @@
 from math import log
-from numba import float64
-from numba import cuda
+from numba import cuda, float64
+from enum import IntEnum, auto
 
-NB_COLOR_MODES = 6
-NB_PALETTES = 2
+
+class ColorMode(IntEnum):
+    ITER_WAVES = auto()
+    ITER = auto()
+    LOG_ITER = auto()
+    R_Z2 = auto()
+    LOG_R_Z2 = auto()
+    INV_Z2 = auto()
+
+
+NB_COLOR_MODES = len(ColorMode)
+
+
+class Palette(IntEnum):
+    HUE = auto()
+    GRAYSCALE = auto()
+    CUSTOM = auto()
+
+
+NB_PALETTES = len(Palette)
 
 
 @cuda.jit("void(uint32[:,:], int32, int32, int32, int32, int32)", device=True)
@@ -52,38 +70,41 @@ def set_pixel_color(
     device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palette, color_waves
 ):
     if z2 > r:
-        # first calculate k based on color mode
-        # k should be 0-1
+        # first calculate k[0-1] based on color mode
         match cmode:
-            case 0:
+            case ColorMode.ITER_WAVES:
                 mic = max_iter / color_waves
                 k = float64(nbi % mic / mic)
-            case 1:
+            case ColorMode.ITER:
                 k = float64(nbi / max_iter)
-            case 2:
+            case ColorMode.LOG_ITER:
                 k = log(float64(nbi)) / log(float64(max_iter))
-            case 3:
+            case ColorMode.R_Z2:
                 # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
                 # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
                 k = float64(r) / float64(z2)
-            case 4:
+            case ColorMode.LOG_R_Z2:
                 k = log(float64(r)) / log(float64(z2))
-            case 5:
+            case ColorMode.INV_Z2:
                 # k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
                 # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
                 k = 1 / z2
         # then calculate color from k
         match palette:
-            case 0:  # hue
+            case Palette.HUE:
                 set_color_hsv(device_array, x, y, k, 1, 1)
-            case 1:  # grayscale
+            case Palette.GRAYSCALE:
                 kk = int(k * 255)
-                device_array[x, y] = (kk * 256 + kk) * 256 + kk
-            case 3:  # custom palette k to rgb
-                pass
+                set_color_rgb(device_array, x, y, kk, kk, kk)
+            case Palette.CUSTOM:  # custom palette k to rgb
+                colors = ((0,255,255,255),(1,255,0,0))
+                r=g=b=0
+                for c in colors:
+                    (position,pr,pg,pb)=c
+                    r += 1-abs(k-position)*pr
+                    g += 1-abs(k-position)*pg
+                    b += 1-abs(k-position)*pb
+                set_color_rgb(device_array, x, y, r,g,b)
+
     else:
         device_array[x, y] = 0
-
-
-# TODO use list of color mode names
-# TODO allow to change palette length

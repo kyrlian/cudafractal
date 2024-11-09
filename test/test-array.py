@@ -6,4 +6,4 @@ x = y = 1
 r = g = b = 255
 pixel_array[x, y] = (r, g, b)
 pixel_array[x, y, 1] = g
-sys.stdout.write("%f" % pixel_array[x, y, 1])
+print("%f" % pixel_array[x, y, 1])
