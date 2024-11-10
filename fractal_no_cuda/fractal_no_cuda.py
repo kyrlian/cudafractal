@@ -1,19 +1,24 @@
-from numba import complex128
 import numpy
 import timeit
+from math import log
+from numba import float64, complex128
+from fractal_cuda.colors_cuda import set_pixel_color, ColorMode
+
 
 def mandelbrot(
     device_array_niter,
     device_array_z2,
+    device_array_k,
+    device_array_rgb,
     topleft,
     xstep,
     ystep,
-    maxiter,
+    max_iterations,
     p,
     escape_radius,
     eps,
     juliaxy,
-    cmode,
+    color_mode,
     palette,
     color_waves,
 ):
@@ -21,56 +26,111 @@ def mandelbrot(
         for y in range(device_array_niter.shape[1]):
             c = complex128(topleft + x * xstep - 1j * y * ystep)
             z = c
-            nbi = 0
+            nb_iter = 0
             z2 = 0
             der = complex128(1 + 0j)
             der2 = 1
-            while nbi < maxiter and z2 < escape_radius and der2 > eps:
+            while nb_iter < max_iterations and z2 < escape_radius and der2 > eps:
                 der = der * p * z
                 z = z**p + c
-                nbi += 1
+                nb_iter += 1
                 z2 = z.real**2 + z.imag**2
                 der2 = der.real**2 + der.imag**2
-            device_array_niter[x, y] = nbi
+            device_array_niter[x, y] = nb_iter
             device_array_z2[x, y] = z2
+            k = compute_k(
+                nb_iter,
+                max_iterations,
+                z2,
+                escape_radius,
+                der2,
+                color_mode,
+                color_waves,
+            )
+            device_array_k[x, y] = k
+            set_pixel_color(device_array_rgb, x, y, k, palette)
 
 
 def julia(
     device_array_niter,
     device_array_z2,
+    device_array_k,
+    device_array_rgb,
     topleft,
     xstep,
     ystep,
-    maxiter,
+    max_iterations,
     p,
     escape_radius,
     eps,
     juliaxy,
-    cmode,
+    color_mode,
     palette,
     color_waves,
 ):
     for x in range(device_array_niter.shape[0]):
         for y in range(device_array_niter.shape[1]):
             z = complex128(topleft + x * xstep - 1j * y * ystep)
-            nbi = 0
+            nb_iter = 0
             z2 = 0
             der = complex128(1 + 0j)
             der2 = 1
-            while nbi < maxiter and z2 < escape_radius and der2 > eps:
+            while nb_iter < max_iterations and z2 < escape_radius and der2 > eps:
                 # TODO test julia with/without der
                 der = der * p * z
                 z = z**p + juliaxy
-                nbi += 1
+                nb_iter += 1
                 z2 = z.real**2 + z.imag**2
                 der2 = der.real**2 + der.imag**2
-            device_array_niter[x, y] = nbi
+            device_array_niter[x, y] = nb_iter
             device_array_z2[x, y] = z2
+            k = compute_k(
+                nb_iter,
+                max_iterations,
+                z2,
+                escape_radius,
+                der2,
+                color_mode,
+                color_waves,
+            )
+            device_array_k[x, y] = k
+            set_pixel_color(device_array_rgb, x, y, k, palette)
+
+
+def compute_k(
+    nb_iter,
+    max_iterations,
+    z2,
+    escape_radius,
+    der2,
+    color_mode,
+    color_waves,
+) -> float64:
+    # calculate k[0-1] based on color mode
+    k = 0.0
+    if z2 > escape_radius:
+        match color_mode:
+            case ColorMode.ITER_WAVES:
+                mic = max_iterations / color_waves
+                k = float64(nb_iter % mic / mic)
+            case ColorMode.ITER:
+                k = float64(nb_iter / max_iterations)
+            case ColorMode.LOG_ITER:
+                k = log(float64(nb_iter)) / log(float64(max_iterations))
+            case ColorMode.R_Z2:
+                # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
+                # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
+                k = float64(escape_radius) / float64(z2)
+            case ColorMode.LOG_R_Z2:
+                k = log(float64(escape_radius)) / log(float64(z2))
+            case ColorMode.INV_Z2:
+                # k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
+                # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
+                k = 1 / z2
+    return k
 
 
 FRACTAL_MODES = [mandelbrot, julia]
-
-
 
 
 def compute_fractal(
@@ -82,29 +142,44 @@ def compute_fractal(
     fractalmode,
     maxiter,
     power,
-    escaper,
+    escape_radius,
     epsilon,
-    juliaxy
+    juliaxy,
+    color_mode,
+    palette,
+    color_waves,
 ):
-    
     timerstart = timeit.default_timer()
     (screenw, screenh) = WINDOW_SIZE
     xstep = abs(xmax - xmin) / screenw
     ystep = abs(ymax - ymin) / screenh
     topleft = complex128(xmin + 1j * ymax)
-    device_array = numpy.zeros((screenw, screenw, 1))
+    device_array_niter = numpy.zeros((screenw, screenw, 1))
+    device_array_z2 = numpy.zeros((screenw, screenw, 1))
+    device_array_k = numpy.zeros((screenw, screenw, 1))
+    device_array_rgb = numpy.zeros((screenw, screenw, 1))
     fractalmethod = FRACTAL_MODES[fractalmode]
     fractalmethod(
-        device_array,
+        device_array_niter,
+        device_array_z2,
+        device_array_k,
+        device_array_rgb,
         topleft,
         xstep,
         ystep,
         maxiter,
         power,
-        escaper,
+        escape_radius,
         epsilon,
-        juliaxy
+        juliaxy,
+        color_mode,
+        palette,
+        color_waves,
     )
-    output_array = device_array
     print(f"Frame calculated in {(timeit.default_timer() - timerstart)}s")
-    return output_array
+    return (
+        device_array_niter,
+        device_array_z2,
+        device_array_k,
+        device_array_rgb,
+    )
