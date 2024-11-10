@@ -1,18 +1,13 @@
 #!python3
 import cProfile
-import sys
 import pygame
 import argparse
-
 from ui.appState import AppState
-
 
 def load_driver(cpu_only: bool):
     if cpu_only:
-        from fractal_no_cuda.utils_no_cuda import create_image
-        from fractal_no_cuda.fractal_no_cuda import FRACTAL_MODES
-
-        return create_image, FRACTAL_MODES
+        from fractal_no_cuda.fractal_no_cuda import compute_fractal, FRACTAL_MODES
+        return compute_fractal, FRACTAL_MODES
     else:
         try:
             from numba import cuda
@@ -21,38 +16,35 @@ def load_driver(cpu_only: bool):
         # CUDA_AVAILABLE = cuda.detect()
         if cuda.is_available():
             print("cuda detected")
-            from fractal_cuda.utils_cuda import create_image
-            from fractal_cuda.fractal_cuda import FRACTAL_MODES
-
-            return create_image, FRACTAL_MODES
+            from fractal_cuda.fractal_cuda import compute_fractal, FRACTAL_MODES
+            return compute_fractal, FRACTAL_MODES
         else:
             print("cuda NOT detected")
-            from fractal_no_cuda.utils_no_cuda import create_image
-            from fractal_no_cuda.fractal_no_cuda import FRACTAL_MODES
-
-            return create_image, FRACTAL_MODES
+            from fractal_no_cuda.utils_no_cuda import compute_fractal, FRACTAL_MODES
+            return compute_fractal, FRACTAL_MODES
 
 
-def pygamemain(create_image, FRACTAL_MODES):
+def pygamemain(compute_fractal, FRACTAL_MODES):
     def redraw(screen_surface, appstate):
         appstate.recalc_size()
-        output_array = create_image(
+        # output_array_rgb = pygame.PixelArray(screen_surface)
+        output_array_niter, output_array_z2, output_array_k, output_array_rgb = compute_fractal(
             appstate.WINDOW_SIZE,
             appstate.xmax,
             appstate.xmin,
             appstate.ymin,
             appstate.ymax,
-            appstate.fractalmode,
-            appstate.maxiterations,
+            appstate.fractal_mode,
+            appstate.max_iterations,
             appstate.power,
-            appstate.escaper,
+            appstate.escape_radius,
             appstate.epsilon,
             appstate.juliaxy,
-            appstate.colormode,
+            appstate.color_mode,
             appstate.palette,
-            appstate.colorwaves,
+            appstate.color_waves,
         )
-        pygame.pixelcopy.array_to_surface(screen_surface, output_array)
+        pygame.pixelcopy.array_to_surface(screen_surface, output_array_rgb)
         pygame.display.flip()
 
     def printhelp(appstate):
@@ -61,18 +53,22 @@ def pygamemain(create_image, FRACTAL_MODES):
         print("z, left click: zoom in")
         print("s, right click: zoom out")
         print("up, down, left, right: pan")
-        print(f"k:  color mode (0, {appstate.colormode})")
+        print(f"k:  color mode (0, {appstate.color_mode})")
         print(f"c:  color palette (0, {appstate.palette})")
-        print(f"w:  color waves (1, {appstate.colorwaves})")
-        print(f"i:  max_iterations (1000, {appstate.maxiterations})")
+        print(f"w:  color waves (1, {appstate.color_waves})")
+        print(f"i:  max iterations (1000, {appstate.max_iterations})")
         print(f"p:  power(2, {appstate.power})")
-        print(f"r:  escape radius(4, {appstate.escaper})")
+        print(f"r:  escape radius(4, {appstate.escape_radius})")
         print(f"e:  epsilon (0.001, {appstate.epsilon})")
         print(f"a:  epsilon=0 (0.001, {appstate.epsilon})")
-        print(f"j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_MODES[appstate.fractalmode].__name__})")
+        print(
+            f"j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_MODES[appstate.fractal_mode].__name__})"
+        )
         print("backspace: reset")
         print("q: quit")
-        print(f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}")
+        print(
+            f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}"
+        )
 
     # Initialize pygame
     pygame.init()
@@ -113,37 +109,37 @@ def pygamemain(create_image, FRACTAL_MODES):
                         appstate.pan(1, 0)
                     case pygame.K_i:
                         if shift:
-                            appstate.changemaxiterations(0.9)
+                            appstate.change_max_iterations(0.9)
                         else:
-                            appstate.changemaxiterations(1.1)
+                            appstate.change_max_iterations(1.1)
                     case pygame.K_r:
                         if shift:
-                            appstate.changeescaper(0.5)
+                            appstate.change_escaper(0.5)
                         else:
-                            appstate.changeescaper(2)
+                            appstate.change_escaper(2)
                     case pygame.K_a:
-                        appstate.changeepsilon(0)
+                        appstate.change_epsilon(0)
                     case pygame.K_e:
                         if shift:
-                            appstate.changeepsilon(10)
+                            appstate.change_epsilon(10)
                         else:
-                            appstate.changeepsilon(0.1)
+                            appstate.change_epsilon(0.1)
                     case pygame.K_p:
                         if shift:
-                            appstate.changepower(-1)
+                            appstate.change_power(-1)
                         else:
-                            appstate.changepower(1)
+                            appstate.change_power(1)
                     case pygame.K_j:
-                        appstate.changefractalmode(pygame.mouse.get_pos())
+                        appstate.change_fractal_mode(pygame.mouse.get_pos())
                     case pygame.K_k:
-                        appstate.changecolormode()
+                        appstate.change_color_mode()
                     case pygame.K_c:
-                        appstate.changecolorpalette()
+                        appstate.change_color_palette()
                     case pygame.K_w:
                         if shift:
-                            appstate.changecolor_waves(-1)
+                            appstate.change_color_waves(-1)
                         else:
-                            appstate.changecolor_waves(1)
+                            appstate.change_color_waves(1)
                     case pygame.K_BACKSPACE:
                         appstate.reset()
                     case pygame.K_h:
@@ -157,7 +153,7 @@ def pygamemain(create_image, FRACTAL_MODES):
                 elif event.button == 3 or event.button == 5:
                     appstate.zoom_out(pygame.mouse.get_pos())
                 elif event.button == 2:
-                    appstate.changefractalmode(pygame.mouse.get_pos())
+                    appstate.change_fractal_mode(pygame.mouse.get_pos())
             if doredraw:
                 redraw(screen_surface, appstate)
             # NOTE - get_pressed() gives current state, not state of event
@@ -175,12 +171,12 @@ def main():
     )
     parser.add_argument("-c", "--cpu", help="compute on cpu only", action="store_true")
     args = parser.parse_args()
-    create_image, FRACTAL_MODES = load_driver(args.cpu)
+    compute_fractal, FRACTAL_MODES = load_driver(args.cpu)
     if args.profile:
         # https://docs.python.org/3.8/library/profile.html#module-cProfile
-        cProfile.run("pygamemain(create_image, FRACTAL_MODES)", sort="cumtime")
+        cProfile.run("pygamemain(compute_fractal, FRACTAL_MODES)", sort="cumtime")
     else:
-        pygamemain(create_image, FRACTAL_MODES)
+        pygamemain(compute_fractal, FRACTAL_MODES)
 
 
 if __name__ == "__main__":

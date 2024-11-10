@@ -3,7 +3,7 @@ from numba import float64, complex128
 from dataclasses import dataclass
 
 from fractal_cuda.fractal_cuda import FRACTAL_MODES
-from fractal_cuda.colors_cuda import NB_COLOR_MODES, NB_PALETTES
+from fractal_cuda.colors_cuda import ColorMode, Palette, NB_COLOR_MODES, NB_PALETTES
 
 @dataclass
 class AppState:
@@ -11,14 +11,14 @@ class AppState:
     xcenter: float64 = -0.5
     ycenter: float64 = 0
     yheight: float64 = 3
-    maxiterations: int = 1000
+    max_iterations: int = 1000
     power: int = 2
-    escaper: int = 4
+    escape_radius: int = 4
     epsilon: float64 = 0.001
-    fractalmode: int = 0
-    colormode: int = 0
-    palette: int = 0
-    colorwaves: int = 1
+    fractal_mode: int = 0
+    color_mode: int = ColorMode.ITER_WAVES
+    palette: int = Palette.HUE
+    color_waves: int = 1
     juliaxy = complex128(0 + 0j)
 
     # Const
@@ -39,7 +39,7 @@ class AppState:
     def zoom_out(self, mousePos=None):
         self._zoom(1 / self.ZOOM_RATE, mousePos)
 
-    def _zoom(self, zoomrate, mousePos):
+    def _zoom(self, zoom_rate, mousePos):
         if mousePos is not None:
             (mouseX, mouseY) = mousePos
         else:
@@ -51,47 +51,47 @@ class AppState:
             * (self.ymax - self.ymin)
             / self.DISPLAY_HEIGTH
         )
-        self.yheight /= zoomrate
+        self.yheight /= zoom_rate
         print(
-            f"Zoom {mouseX},{mouseY}, ({self.xcenter},{self.ycenter}), factor {zoomrate}"
+            f"Zoom {mouseX},{mouseY}, ({self.xcenter},{self.ycenter}), factor {zoom_rate}"
         )
 
-    def changecolormode(self):
-        self.colormode = (self.colormode + 1) % NB_COLOR_MODES
-        print(f"Color mode: {self.colormode}")
+    def change_color_mode(self):
+        self.color_mode = (self.color_mode + 1) % NB_COLOR_MODES
+        print(f"Color mode: {self.color_mode}")
 
-    def changecolorpalette(self):
+    def change_color_palette(self):
         self.palette = (self.palette + 1) % NB_PALETTES
         print(f"Palette: {self.palette}")
 
-    def changecolor_waves(self, plusminus):
-        self.colorwaves = self.colorwaves + plusminus
-        if self.colorwaves == 0:
-            self.colorwaves = 1
-        print(f"Color waves: {self.colorwaves}")
+    def change_color_waves(self, plusminus):
+        self.color_waves = self.color_waves + plusminus
+        if self.color_waves == 0:
+            self.color_waves = 1
+        print(f"Color waves: {self.color_waves}")
 
-    def changemaxiterations(self, factor):
-        self.maxiterations = int(self.maxiterations * factor)
-        print(f"Max iterations: {self.maxiterations}")
+    def change_max_iterations(self, factor):
+        self.max_iterations = int(self.max_iterations * factor)
+        print(f"Max iterations: {self.max_iterations}")
 
-    def changepower(self, plusminus):
+    def change_power(self, plusminus):
         self.power = (self.power + plusminus) % 16
         print(f"Power: {self.power}")
 
-    def changeescaper(self, factor):
-        self.escaper = int(self.escaper * factor)
-        print(f"Escape R: {self.escaper}")
+    def change_escape_radius(self, factor):
+        self.escape_radius = int(self.escape_radius * factor)
+        print(f"Escape radius: {self.escape_radius}")
 
-    def changeepsilon(self, factor):
+    def change_epsilon(self, factor):
         if factor == self.epsilon == 0:
             self.epsilon = 0.001
         else:
             self.epsilon *= factor
         print(f"Epsilon: {self.epsilon}")
 
-    def changefractalmode(self, pos):
+    def change_fractal_mode(self, pos):
         (mouseX, mouseY) = pos
-        self.fractalmode = (self.fractalmode + 1) % len(FRACTAL_MODES)
+        self.fractal_mode = (self.fractal_mode + 1) % len(FRACTAL_MODES)
         juliax = self.xmin + mouseX * (self.xmax - self.xmin) / self.DISPLAY_WIDTH
         juliay = (
             self.ymin
@@ -101,7 +101,7 @@ class AppState:
         )
         self.juliaxy = complex128(juliax + juliay * 1j)
         print(
-            f"Fractal mode: {FRACTAL_MODES[self.fractalmode].__name__}"
+            f"Fractal mode: {FRACTAL_MODES[self.fractal_mode].__name__}"
         )
 
     def recalc_size(self):

@@ -1,6 +1,5 @@
-from math import log
-from numba import cuda, float64
 from enum import IntEnum, auto
+from numba import cuda
 
 
 class ColorMode(IntEnum):
@@ -14,7 +13,6 @@ class ColorMode(IntEnum):
 
 NB_COLOR_MODES = len(ColorMode)
 
-
 class Palette(IntEnum):
     HUE = auto()
     GRAYSCALE = auto()
@@ -25,14 +23,14 @@ NB_PALETTES = len(Palette)
 
 
 @cuda.jit("void(uint32[:,:], int32, int32, int32, int32, int32)", device=True)
-def set_color_rgb(device_array, x, y, r, g, b):
+def set_color_rgb(device_array_rgb, x, y, r, g, b):
     # r, g, b should be [0:255]
     packed = (r * 256 + g) * 256 + b
-    device_array[x, y] = packed
+    device_array_rgb[x, y] = packed
 
 
 @cuda.jit("void(uint32[:,:], int32, int32, float64, float64, float64)", device=True)
-def set_color_hsv(device_array, x, y, h, s, v):
+def set_color_hsv(device_array_rgb, x, y, h, s, v):
     # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
     if s > 0:
@@ -59,56 +57,32 @@ def set_color_hsv(device_array, x, y, h, s, v):
             r, g, b = v, w, q
     else:
         r, g, b = v, v, v
-    set_color_rgb(device_array, x, y, int(r * 255), int(g * 255), int(b * 255))
+    set_color_rgb(device_array_rgb, x, y, int(r * 255), int(g * 255), int(b * 255))
 
 
 @cuda.jit(
-    "void(uint32[:,:], int32, int32, int32, int32, float64, float64, float64, int32, int32, int32)",
+    "void(uint32[:,:], int32, int32, int32, int32)",
     device=True,
 )
-def set_pixel_color(
-    device_array, x, y, nbi, max_iter, z2, r, der2, cmode, palette, color_waves
-):
-    if z2 > r:
-        # first calculate k[0-1] based on color mode
-        match cmode:
-            case ColorMode.ITER_WAVES:
-                mic = max_iter / color_waves
-                k = float64(nbi % mic / mic)
-            case ColorMode.ITER:
-                k = float64(nbi / max_iter)
-            case ColorMode.LOG_ITER:
-                k = log(float64(nbi)) / log(float64(max_iter))
-            case ColorMode.R_Z2:
-                # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
-                # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
-                k = float64(r) / float64(z2)
-            case ColorMode.LOG_R_Z2:
-                k = log(float64(r)) / log(float64(z2))
-            case ColorMode.INV_Z2:
-                # k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
-                # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
-                k = 1 / z2
-        # then calculate color from k
-        match palette:
-            case Palette.HUE:
-                set_color_hsv(device_array, x, y, k, 1, 1)
-            case Palette.GRAYSCALE:
-                kk = int(k * 255)
-                set_color_rgb(device_array, x, y, kk, kk, kk)
-            case Palette.CUSTOM:  # custom palette k to rgb
-                colors = ((0.0, 255, 255, 255), (0.5, 0, 255, 0), (1.0, 255, 0, 0))
-                for i in range(len(colors) - 1):
-                    pa_k, pa_r, pa_g, pa_b = colors[i]
-                    pb_k, pb_r, pb_g, pb_b = colors[i + 1]
-                    if k >= pa_k and k < pb_k:
-                        d_ab = pb_k - pa_k
-                        d_ak = 1 - (k - pa_k) / d_ab
-                        d_bk = 1 - (pb_k - k) / d_ab
-                        r = pa_r * d_ak + pb_r * d_bk
-                        g = pa_g * d_ak + pb_g * d_bk
-                        b = pa_b * d_ak + pb_b * d_bk
-                        set_color_rgb(device_array, x, y, r, g, b)
-                        break
-    else:
-        device_array[x, y] = 0
+def set_pixel_color(device_array_rgb, x, y, k, palette):
+    # calculate color from k
+    match palette:
+        case Palette.HUE:
+            set_color_hsv(device_array_rgb, x, y, k, 1, 1)
+        case Palette.GRAYSCALE:
+            kk = int(k * 255)
+            set_color_rgb(device_array_rgb, x, y, kk, kk, kk)
+        case Palette.CUSTOM:  # custom palette k to rgb
+            colors = ((0.0, 255, 255, 255), (0.5, 0, 255, 0), (1.0, 255, 0, 0))
+            for i in range(len(colors) - 1):
+                pa_k, pa_r, pa_g, pa_b = colors[i]
+                pb_k, pb_r, pb_g, pb_b = colors[i + 1]
+                if k >= pa_k and k < pb_k:
+                    d_ab = pb_k - pa_k
+                    d_ak = 1 - (k - pa_k) / d_ab
+                    d_bk = 1 - (pb_k - k) / d_ab
+                    r = pa_r * d_ak + pb_r * d_bk
+                    g = pa_g * d_ak + pb_g * d_bk
+                    b = pa_b * d_ak + pb_b * d_bk
+                    set_color_rgb(device_array_rgb, x, y, r, g, b)
+    set_color_rgb(device_array_rgb, x, y, r, g, b)

@@ -1,58 +1,5 @@
-import math
-import numpy
+from math import floor
 from numba import cuda
-from numba import complex128
-import timeit
-from fractal_cuda.fractal_cuda import FRACTAL_MODES
-
-
-def create_image(
-    WINDOW_SIZE,
-    xmax,
-    xmin,
-    ymin,
-    ymax,
-    fractalmode,
-    maxiter,
-    power,
-    escaper,
-    epsilon,
-    juliaxy,
-    currentcolormode,
-    currentpalette,
-    currentcolor_waves,
-):
-    
-    timerstart = timeit.default_timer()
-    (screenw, screenh) = WINDOW_SIZE
-    xstep = abs(xmax - xmin) / screenw
-    ystep = abs(ymax - ymin) / screenh
-    topleft = complex128(xmin + 1j * ymax)
-    device_array = cuda.device_array((screenw, screenh), dtype=numpy.uint32)
-    threadsperblock = compute_threadsperblock()  # (32, 16) #real size = 32*16
-    blockspergrid = (
-        math.ceil(screenw / threadsperblock[0]),
-        math.ceil(screenh / threadsperblock[1]),
-    )
-    fractalmethod = FRACTAL_MODES[fractalmode]
-    fractalmethod[blockspergrid, threadsperblock](
-        device_array,
-        topleft,
-        xstep,
-        ystep,
-        maxiter,
-        power,
-        escaper,
-        epsilon,
-        juliaxy,
-        currentcolormode,
-        currentpalette,
-        currentcolor_waves,
-    )
-    output_array = device_array.copy_to_host()
-    print(f"Frame calculated in {(timeit.default_timer() - timerstart)}s")
-    return output_array
-
 
 def compute_threadsperblock():
     gpu = cuda.get_current_device()
@@ -67,5 +14,5 @@ def compute_threadsperblock():
     # mby = math.floor(gpu.MAX_THREADS_PER_BLOCK / mbx / 4) * 4
     # if we dont care about the ratio mbx/mby :
     mbx = 32
-    mby = math.floor(gpu.MAX_THREADS_PER_BLOCK / mbx)
+    mby = floor(gpu.MAX_THREADS_PER_BLOCK / mbx)
     return (mbx, mby)
