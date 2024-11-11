@@ -21,7 +21,7 @@ class Palette(IntEnum):
 NB_PALETTES = len(Palette)
 
 
-@cuda.jit("void(uint32[:,:], int32, int32, int32, int32, int32)", device=True)
+@cuda.jit(device=True)
 def set_color_rgb(device_array_rgb, x, y, r, g, b):
     # r, g, b should be [0:255]
     packed = (r * 256 + g) * 256 + b
@@ -72,7 +72,7 @@ def set_pixel_color(device_array_rgb, device_array_k, x, y,  palette):
             kk = int(k * 255)
             set_color_rgb(device_array_rgb, x, y, kk, kk, kk)
         case Palette.CUSTOM:  # custom palette k to rgb
-            colors = ((0.0, 255, 255, 255), (0.5, 0, 255, 0), (1.0, 255, 0, 0))
+            colors = ((0.0, 255, 0,0), (0.5, 0, 255, 0), (1.0, 255, 0, 0))
             for i in range(len(colors) - 1):
                 pa_k, pa_r, pa_g, pa_b = colors[i]
                 pb_k, pb_r, pb_g, pb_b = colors[i + 1]
