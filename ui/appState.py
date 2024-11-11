@@ -18,7 +18,7 @@ class AppState:
     fractal_mode: int = 0
     color_mode: int = ColorMode.ITER_WAVES
     palette: int = Palette.HUE
-    color_waves: int = 1
+    color_waves: int = 2
     juliaxy = complex128(0 + 0j)
 
     # Const
