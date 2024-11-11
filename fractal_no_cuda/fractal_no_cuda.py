@@ -5,6 +5,42 @@ from numba import float64, complex128
 from fractal_cuda.colors_cuda import set_pixel_color, ColorMode
 
 
+def set_pixel_k(
+    device_array_k,
+    x,
+    y,
+    nb_iter,
+    max_iterations,
+    z2,
+    escape_radius,
+    der2,
+    color_mode,
+    color_waves,
+):
+    # calculate k[0-1] based on color mode
+    k = 0.0
+    if z2 > escape_radius:
+        match color_mode:
+            case ColorMode.ITER_WAVES:
+                mic = max_iterations / color_waves
+                k = float64(nb_iter % mic / mic)
+            case ColorMode.ITER:
+                k = float64(nb_iter / max_iterations)
+            case ColorMode.LOG_ITER:
+                k = log(float64(nb_iter)) / log(float64(max_iterations))
+            case ColorMode.R_Z2:
+                # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
+                # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
+                k = float64(escape_radius) / float64(z2)
+            case ColorMode.LOG_R_Z2:
+                k = log(float64(escape_radius)) / log(float64(z2))
+            case ColorMode.INV_Z2:
+                # k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
+                # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
+                k = 1 / z2
+    device_array_k[x, y] = k
+
+
 def mandelbrot(
     device_array_niter,
     device_array_z2,
@@ -38,7 +74,10 @@ def mandelbrot(
                 der2 = der.real**2 + der.imag**2
             device_array_niter[x, y] = nb_iter
             device_array_z2[x, y] = z2
-            k = compute_k(
+            set_pixel_k(
+                device_array_k,
+                x,
+                y,
                 nb_iter,
                 max_iterations,
                 z2,
@@ -47,8 +86,7 @@ def mandelbrot(
                 color_mode,
                 color_waves,
             )
-            device_array_k[x, y] = k
-            set_pixel_color(device_array_rgb, x, y, k, palette)
+            set_pixel_color(device_array_rgb, device_array_k, x, y, palette)
 
 
 def julia(
@@ -84,7 +122,10 @@ def julia(
                 der2 = der.real**2 + der.imag**2
             device_array_niter[x, y] = nb_iter
             device_array_z2[x, y] = z2
-            k = compute_k(
+            set_pixel_k(
+                device_array_k,
+                x,
+                y,
                 nb_iter,
                 max_iterations,
                 z2,
@@ -93,41 +134,7 @@ def julia(
                 color_mode,
                 color_waves,
             )
-            device_array_k[x, y] = k
-            set_pixel_color(device_array_rgb, x, y, k, palette)
-
-
-def compute_k(
-    nb_iter,
-    max_iterations,
-    z2,
-    escape_radius,
-    der2,
-    color_mode,
-    color_waves,
-) -> float64:
-    # calculate k[0-1] based on color mode
-    k = 0.0
-    if z2 > escape_radius:
-        match color_mode:
-            case ColorMode.ITER_WAVES:
-                mic = max_iterations / color_waves
-                k = float64(nb_iter % mic / mic)
-            case ColorMode.ITER:
-                k = float64(nb_iter / max_iterations)
-            case ColorMode.LOG_ITER:
-                k = log(float64(nb_iter)) / log(float64(max_iterations))
-            case ColorMode.R_Z2:
-                # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
-                # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
-                k = float64(escape_radius) / float64(z2)
-            case ColorMode.LOG_R_Z2:
-                k = log(float64(escape_radius)) / log(float64(z2))
-            case ColorMode.INV_Z2:
-                # k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
-                # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
-                k = 1 / z2
-    return k
+            set_pixel_color(device_array_rgb, device_array_k, x, y, palette)
 
 
 FRACTAL_MODES = [mandelbrot, julia]

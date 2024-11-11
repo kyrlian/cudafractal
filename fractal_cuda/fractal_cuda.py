@@ -43,6 +43,7 @@ def set_pixel_k(
                 k = 1 / z2
     device_array_k[x, y] = k
 
+
 @cuda.jit()
 def mandelbrot(
     device_array_niter,
@@ -89,7 +90,7 @@ def mandelbrot(
             color_mode,
             color_waves,
         )
-        set_pixel_color(device_array_rgb, device_array_k, x, y,  palette)
+        set_pixel_color(device_array_rgb, device_array_k, x, y, palette)
 
 
 @cuda.jit()
@@ -138,9 +139,7 @@ def julia(
             color_mode,
             color_waves,
         )
-        set_pixel_color(device_array_rgb, device_array_k, x, y,  palette)
-
-
+        set_pixel_color(device_array_rgb, device_array_k, x, y, palette)
 
 
 FRACTAL_MODES = [mandelbrot, julia]
