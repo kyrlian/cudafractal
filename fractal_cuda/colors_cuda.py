@@ -1,22 +1,21 @@
-from enum import IntEnum, auto
+from enum import IntEnum
 from numba import cuda
 
-
 class ColorMode(IntEnum):
-    ITER_WAVES = auto()
-    ITER = auto()
-    LOG_ITER = auto()
-    R_Z2 = auto()
-    LOG_R_Z2 = auto()
-    INV_Z2 = auto()
+    ITER_WAVES = 0
+    ITER = 1
+    LOG_ITER = 2
+    R_Z2 = 3
+    LOG_R_Z2 = 4
+    INV_Z2 = 5
 
 
 NB_COLOR_MODES = len(ColorMode)
 
 class Palette(IntEnum):
-    HUE = auto()
-    GRAYSCALE = auto()
-    CUSTOM = auto()
+    HUE = 0
+    GRAYSCALE = 1
+    CUSTOM = 2
 
 
 NB_PALETTES = len(Palette)
@@ -29,7 +28,7 @@ def set_color_rgb(device_array_rgb, x, y, r, g, b):
     device_array_rgb[x, y] = packed
 
 
-@cuda.jit("void(uint32[:,:], int32, int32, float64, float64, float64)", device=True)
+@cuda.jit(device=True)
 def set_color_hsv(device_array_rgb, x, y, h, s, v):
     # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
@@ -61,11 +60,11 @@ def set_color_hsv(device_array_rgb, x, y, h, s, v):
 
 
 @cuda.jit(
-    "void(uint32[:,:], int32, int32, int32, int32)",
     device=True,
 )
-def set_pixel_color(device_array_rgb, x, y, k, palette):
+def set_pixel_color(device_array_rgb, device_array_k, x, y,  palette):
     # calculate color from k
+    k = device_array_k[x,y]
     match palette:
         case Palette.HUE:
             set_color_hsv(device_array_rgb, x, y, k, 1, 1)
@@ -85,4 +84,5 @@ def set_pixel_color(device_array_rgb, x, y, k, palette):
                     g = pa_g * d_ak + pb_g * d_bk
                     b = pa_b * d_ak + pb_b * d_bk
                     set_color_rgb(device_array_rgb, x, y, r, g, b)
-    set_color_rgb(device_array_rgb, x, y, r, g, b)
+        case _:
+            set_color_rgb(device_array_rgb, x, y, 0, 255, 0)
