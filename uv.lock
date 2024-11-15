@@ -6,14 +6,18 @@ name = "fractal-python-cuda"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "numba" },
     { name = "numpy" },
     { name = "pygame" },
 ]
 
+[package.optional-dependencies]
+cuda = [
+    { name = "numba" },
+]
+
 [package.metadata]
 requires-dist = [
-    { name = "numba", specifier = ">=0.60.0" },
+    { name = "numba", marker = "extra == 'cuda'", specifier = ">=0.60.0" },
     { name = "numpy", specifier = ">=2.0.2" },
     { name = "pygame", specifier = ">=2.6.1" },
 ]

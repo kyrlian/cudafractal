@@ -1,33 +1,35 @@
 import math
-from numba import float64, complex128
+from numpy import float64, complex128 
+# from numba import float64, complex128
 from dataclasses import dataclass
-
-from fractal_cuda.fractal_cuda import FRACTAL_MODES
-from fractal_cuda.colors_cuda import ColorMode, Palette, NB_COLOR_MODES, NB_PALETTES
+from colors.colors import ColorMode, Palette
 
 @dataclass
-class AppState:
-    # variables
-    xcenter: float64 = -0.5
-    ycenter: float64 = 0
-    yheight: float64 = 3
-    max_iterations: int = 1000
-    power: int = 2
-    escape_radius: int = 4
-    epsilon: float64 = 0.001
-    fractal_mode: int = 0
-    color_mode: int = ColorMode.ITER_WAVES
-    palette: int = Palette.HUE
-    color_waves: int = 2
-    juliaxy = complex128(0 + 0j)
+class AppState():
+    def __init__(self, FRACTAL_MODES):
+        self.FRACTAL_MODES = FRACTAL_MODES
 
-    # Const
-    ZOOM_RATE = 2
-    PAN_SPEED = 0.3  # ratio of xmax-xmin
-    DISPLAY_HEIGTH = 1024
-    DISPLAY_RATIO = 4 / 3
-    DISPLAY_WIDTH = math.floor(DISPLAY_HEIGTH * DISPLAY_RATIO)
-    WINDOW_SIZE = DISPLAY_WIDTH, DISPLAY_HEIGTH
+        # variables
+        self.xcenter = -0.5
+        self.ycenter = 0
+        self.yheight = 3
+        self.max_iterations = 1000
+        self.power = 2
+        self.escape_radius = 4
+        self.epsilon = 0.001
+        self.fractal_mode = 0
+        self.palette = Palette.HUE
+        self.color_mode = ColorMode.ITER_WAVES
+        self.color_waves = 2
+        self.juliaxy = complex128(0 + 0j)
+
+        # Const
+        self.ZOOM_RATE = 2
+        self.PAN_SPEED = 0.3  # ratio of xmax-xmin
+        self.DISPLAY_HEIGTH = 1024
+        self.DISPLAY_RATIO = 4 / 3
+        self.DISPLAY_WIDTH = math.floor(self.DISPLAY_HEIGTH * self.DISPLAY_RATIO)
+        self.WINDOW_SIZE = self.DISPLAY_WIDTH, self.DISPLAY_HEIGTH
 
     def reset(self):
         print("Reset ")
@@ -57,11 +59,11 @@ class AppState:
         )
 
     def change_color_mode(self):
-        self.color_mode = (self.color_mode + 1) % NB_COLOR_MODES
+        self.color_mode = (self.color_mode + 1) % len(ColorMode)
         print(f"Color mode: {self.color_mode}")
 
     def change_color_palette(self):
-        self.palette = (self.palette + 1) % NB_PALETTES
+        self.palette = (self.palette + 1) % len(Palette)
         print(f"Palette: {self.palette}")
 
     def change_color_waves(self, plusminus):
@@ -91,7 +93,7 @@ class AppState:
 
     def change_fractal_mode(self, pos):
         (mouseX, mouseY) = pos
-        self.fractal_mode = (self.fractal_mode + 1) % len(FRACTAL_MODES)
+        self.fractal_mode = (self.fractal_mode + 1) % len(self.FRACTAL_MODES)
         juliax = self.xmin + mouseX * (self.xmax - self.xmin) / self.DISPLAY_WIDTH
         juliay = (
             self.ymin
@@ -101,7 +103,7 @@ class AppState:
         )
         self.juliaxy = complex128(juliax + juliay * 1j)
         print(
-            f"Fractal mode: {FRACTAL_MODES[self.fractal_mode].__name__}"
+            f"Fractal mode: {self.FRACTAL_MODES[self.fractal_mode].__name__}"
         )
 
     def recalc_size(self):

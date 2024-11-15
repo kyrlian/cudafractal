@@ -2,8 +2,7 @@
 
 ## Requirements
 
-The cuda version requires [cuda](https://developer.nvidia.com/cuda-downloads) - you can install only the compiler (CUDA/Development/Compiler) & libraries (CUDA/Runtime/Libraries)
-
+- The cuda version requires [cuda](https://developer.nvidia.com/cuda-downloads) - you can install only the compiler (CUDA/Development/Compiler) & libraries (CUDA/Runtime/Libraries)
 
 ## Install as uv tool from git
 
