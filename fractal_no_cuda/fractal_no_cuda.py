@@ -1,10 +1,8 @@
-import numpy
 import timeit
-from math import log
+import numpy
 
-# from numba import float64, complex128
 from numpy import float64, complex128
-from colors.colors import set_pixel_color, set_pixel_k
+from fractal_no_cuda.colors_no_cuda import set_pixel_color, set_pixel_k
 
 
 def mandelbrot(
@@ -23,15 +21,15 @@ def mandelbrot(
     color_mode,
     palette,
     color_waves,
-):
+) -> None:
     for x in range(device_array_niter.shape[0]):
         for y in range(device_array_niter.shape[1]):
-            c:complex128 = complex128(topleft + x * xstep - 1j * y * ystep)
-            z:complex128 = c
-            nb_iter:int = 0
-            z2:float64 = 0
-            der:complex128 = complex128(1 + 0j)
-            der2: float64 = 1
+            c: complex128 = complex128(topleft + x * xstep - 1j * y * ystep)
+            z: complex128 = c
+            nb_iter: int = 0
+            z2: float64 = float64(0)
+            der: complex128 = complex128(1 + 0j)
+            der2: float64 = float64(1)
             while nb_iter < max_iterations and z2 < escape_radius and der2 > eps:
                 der = der * p * z
                 z = z**p + c
@@ -71,14 +69,14 @@ def julia(
     color_mode,
     palette,
     color_waves,
-):
+) -> None:
     for x in range(device_array_niter.shape[0]):
         for y in range(device_array_niter.shape[1]):
             z = complex128(topleft + x * xstep - 1j * y * ystep)
             nb_iter = 0
-            z2 = 0
+            z2: float64 = float64(0)
             der = complex128(1 + 0j)
-            der2 = 1
+            der2: float64 = float64(1)
             while nb_iter < max_iterations and z2 < escape_radius and der2 > eps:
                 # TODO test julia with/without der
                 der = der * p * z
@@ -113,7 +111,7 @@ def compute_fractal(
     ymin,
     ymax,
     fractalmode,
-    maxiter,
+    max_iterations,
     power,
     escape_radius,
     epsilon,
@@ -127,10 +125,10 @@ def compute_fractal(
     xstep = abs(xmax - xmin) / screenw
     ystep = abs(ymax - ymin) / screenh
     topleft = complex128(xmin + 1j * ymax)
-    device_array_niter = numpy.zeros((screenw, screenw, 1))
-    device_array_z2 = numpy.zeros((screenw, screenw, 1))
-    device_array_k = numpy.zeros((screenw, screenw, 1))
-    device_array_rgb = numpy.zeros((screenw, screenw, 1))
+    device_array_niter = numpy.zeros((screenw, screenw, 1), dtype=numpy.uint32)
+    device_array_z2 = numpy.zeros((screenw, screenw, 1), dtype=numpy.float64)
+    device_array_k = numpy.zeros((screenw, screenw, 1), dtype=numpy.float64)
+    device_array_rgb = numpy.zeros((screenw, screenw, 1), dtype=numpy.uint32)
     fractalmethod = FRACTAL_MODES[fractalmode]
     fractalmethod(
         device_array_niter,
@@ -140,7 +138,7 @@ def compute_fractal(
         topleft,
         xstep,
         ystep,
-        maxiter,
+        max_iterations,
         power,
         escape_radius,
         epsilon,
@@ -150,9 +148,4 @@ def compute_fractal(
         color_waves,
     )
     print(f"Frame calculated in {(timeit.default_timer() - timerstart)}s")
-    return (
-        device_array_niter,
-        device_array_z2,
-        device_array_k,
-        device_array_rgb,
-    )
+    return device_array_niter, device_array_z2, device_array_k, device_array_rgb

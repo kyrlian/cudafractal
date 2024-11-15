@@ -13,7 +13,7 @@ def load_driver(cpu_only: bool):
                 from fractal_cuda.fractal_cuda import compute_fractal, FRACTAL_MODES
                 return compute_fractal, FRACTAL_MODES
         except Exception:
-            print(f"Error importing numba.cuda: {Exception}")
+            print("Error importing numba.cuda")
     print("NOT using cuda")
     from fractal_no_cuda.fractal_no_cuda import compute_fractal, FRACTAL_MODES
     return compute_fractal, FRACTAL_MODES

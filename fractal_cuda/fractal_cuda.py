@@ -1,10 +1,13 @@
-from math import log, ceil
+
+import timeit
 import numpy
+from math import ceil
 from numba import float64, complex128
 from numba import cuda
-import timeit
-from colors.colors import set_pixel_color, set_pixel_k
+
+from fractal_cuda.colors_cuda import set_pixel_color, set_pixel_k
 from fractal_cuda.utils_cuda import compute_threadsperblock
+
 
 @cuda.jit()
 def mandelbrot(
@@ -23,15 +26,15 @@ def mandelbrot(
     color_mode,
     palette,
     color_waves,
-):
+) -> None:
     x, y = cuda.grid(2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
-        c = complex128(topleft + x * xstep - 1j * y * ystep)
-        z = c
-        nb_iter = 0
-        z2 = 0
-        der = complex128(1 + 0j)
-        der2 = 1
+        c: complex128 = complex128(topleft + x * xstep - 1j * y * ystep)
+        z: complex128 = c
+        nb_iter: int = 0
+        z2: float64 = float64(0)
+        der: complex128 = complex128(1 + 0j)
+        der2: float64 = float64(1)
         while nb_iter < max_iterations and z2 < escape_radius and der2 > eps:
             der = der * p * z
             z = z**p + c
@@ -72,14 +75,14 @@ def julia(
     color_mode,
     palette,
     color_waves,
-):
+) -> None:
     x, y = cuda.grid(2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
         z = complex128(topleft + x * xstep - 1j * y * ystep)
         nb_iter = 0
-        z2 = 0
+        z2 = float64(0)
         der = complex128(1 + 0j)
-        der2 = 1
+        der2 = float64(1)
         while nb_iter < max_iterations and z2 < escape_radius and der2 > eps:
             # TODO test julia with/without der
             der = der * p * z

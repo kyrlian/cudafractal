@@ -1,6 +1,5 @@
-from math import log, ceil
+from math import log
 from enum import IntEnum
-# from numba import cuda
 from numpy import float64
 
 class ColorMode(IntEnum):
@@ -16,14 +15,14 @@ class Palette(IntEnum):
     GRAYSCALE = 1
     CUSTOM = 2
 
-# @cuda.jit(device=True)
+
 def set_color_rgb(device_array_rgb, x, y, r, g, b):
     # r, g, b should be [0:255]
     packed = (r * 256 + g) * 256 + b
     device_array_rgb[x, y] = packed
 
 
-# @cuda.jit(device=True)
+
 def set_color_hsv(device_array_rgb, x, y, h, s, v):
     # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
@@ -54,7 +53,7 @@ def set_color_hsv(device_array_rgb, x, y, h, s, v):
     set_color_rgb(device_array_rgb, x, y, int(r * 255), int(g * 255), int(b * 255))
 
 
-# @cuda.jit(device=True)
+
 def set_pixel_color(device_array_rgb, device_array_k, x, y,  palette):
     # calculate color from k
     k = device_array_k[x,y]
@@ -80,7 +79,7 @@ def set_pixel_color(device_array_rgb, device_array_k, x, y,  palette):
         case _:
             set_color_rgb(device_array_rgb, x, y, 0, 255, 0)
 
-# @cuda.jit(device=True)
+
 def set_pixel_k(
     device_array_k,
     x,
