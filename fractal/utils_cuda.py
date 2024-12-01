@@ -3,7 +3,12 @@ import numpy
 
 try:
     from numba import cuda
-    from numba.cuda import jit as myjit, detect as mydetect, grid as mygrid
+    from numba.cuda import (
+        jit as cuda_jit,
+        detect as cuda_detect,
+        is_available as cuda_available,
+        grid as cuda_grid,
+    )
 
     def compute_threadsperblock():
         gpu = cuda.get_current_device()
@@ -30,18 +35,21 @@ except ImportError:
     print("numba cuda not installed")
 
     # If numba cuda is not installed, use a noop operations
-    def myjit(func):
+    def cuda_jit(func):
         return func
 
-    def mydetect():
+    def cuda_detect():
         return False
+
+    def cuda_available():
+        return False
+
+    def cuda_grid(n):
+        return (1, 1)
 
     def compute_threadsperblock():
         return (1, 1)
-
-    def mygrid(n):
-        return (1, 1)
-
+    
     def init_array(dimx, dimy, dtype):
         # device_array_niter = numpy.zeros((screenw, screenw, 1), dtype=numpy.uint32)
         return numpy.zeros((dimx, dimy, 1), dtype=dtype)

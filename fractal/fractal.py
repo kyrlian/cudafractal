@@ -3,10 +3,10 @@ import numpy
 from math import ceil
 from numpy import float64, complex128
 from fractal.colors import set_pixel_color, set_pixel_k
-from fractal.utils_cuda import myjit, mydetect, mygrid, compute_threadsperblock, init_array
+from fractal.utils_cuda import cuda_jit, cuda_available, cuda_grid, compute_threadsperblock, init_array
 
 
-@myjit()
+@cuda_jit()
 def mandelbrot_xy(
     x,
     y,
@@ -55,7 +55,7 @@ def mandelbrot_xy(
     set_pixel_color(device_array_rgb, device_array_k, x, y, palette)
 
 
-@myjit()
+@cuda_jit()
 def mandelbrot_kernel(
     device_array_niter,
     device_array_z2,
@@ -73,7 +73,7 @@ def mandelbrot_kernel(
     palette,
     color_waves,
 ) -> None:
-    x, y = mygrid(2)
+    x, y = cuda_grid(2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
         mandelbrot_xy(
             x,
@@ -96,7 +96,7 @@ def mandelbrot_kernel(
         )
 
 
-@myjit()
+@cuda_jit()
 def julia_xy(
     x,
     y,
@@ -145,7 +145,7 @@ def julia_xy(
     set_pixel_color(device_array_rgb, device_array_k, x, y, palette)
 
 
-@myjit()
+@cuda_jit()
 def julia_kernel(
     device_array_niter,
     device_array_z2,
@@ -163,7 +163,7 @@ def julia_kernel(
     palette,
     color_waves,
 ) -> None:
-    x, y = mygrid(2)
+    x, y = cuda_grid(2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
         julia_xy(
             x,
@@ -186,6 +186,7 @@ def julia_kernel(
         )
 
 
+FRACTAL_NAMES = ["mandelbrot", "julia"]
 FRACTAL_MODES = [mandelbrot_xy, julia_xy]
 FRACTAL_KERNELS = [mandelbrot_kernel, julia_kernel]
 
@@ -214,7 +215,7 @@ def compute_fractal(
     device_array_z2 = init_array(screenw, screenh, numpy.float64)
     device_array_k = init_array(screenw, screenh, numpy.float64)
     device_array_rgb = init_array(screenw, screenh, numpy.uint32)
-    if mydetect():
+    if cuda_available():
         threadsperblock = compute_threadsperblock()
         blockspergrid = (
             ceil(screenw / threadsperblock[0]),

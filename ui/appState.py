@@ -2,13 +2,14 @@ import math
 from numpy import complex128
 from dataclasses import dataclass
 from fractal.colors import ColorMode, Palette
+import pygame
 
 @dataclass
 class AppState():
-    def __init__(self, FRACTAL_MODES):
-        self.FRACTAL_MODES = FRACTAL_MODES
+    def __init__(self, FRACTAL_NAMES):
+        self.FRACTAL_NAMES = FRACTAL_NAMES
 
-        # variables
+        # fractal variables
         self.xcenter = -0.5
         self.ycenter = 0
         self.yheight = 3
@@ -21,6 +22,8 @@ class AppState():
         self.color_mode = ColorMode.ITER_WAVES
         self.color_waves = 2
         self.juliaxy = complex128(0 + 0j)
+        # UI variables
+        self.show_info = True
 
         # Const
         self.ZOOM_RATE = 2
@@ -92,7 +95,7 @@ class AppState():
 
     def change_fractal_mode(self, pos):
         (mouseX, mouseY) = pos
-        self.fractal_mode = (self.fractal_mode + 1) % len(self.FRACTAL_MODES)
+        self.fractal_mode = (self.fractal_mode + 1) % len(self.FRACTAL_NAMES)
         juliax = self.xmin + mouseX * (self.xmax - self.xmin) / self.DISPLAY_WIDTH
         juliay = (
             self.ymin
@@ -102,7 +105,7 @@ class AppState():
         )
         self.juliaxy = complex128(juliax + juliay * 1j)
         print(
-            f"Fractal mode: {self.FRACTAL_MODES[self.fractal_mode].__name__}"
+            f"Fractal mode: {self.FRACTAL_NAMES[self.fractal_mode]}"
         )
 
     def recalc_size(self):
@@ -115,3 +118,20 @@ class AppState():
     def pan(self, x, y):
         self.xcenter += x * self.PAN_SPEED * (self.xmax - self.xmin)
         self.ycenter += y * self.PAN_SPEED * (self.ymax - self.ymin)
+    
+    def toggle_info(self):
+        self.show_info = not self.show_info
+
+    def get_info(self):
+        return [
+            f"Fractal mode: {self.FRACTAL_NAMES[self.fractal_mode]}",  
+            f"x: {self.xmin} - {self.xmax}",
+            f"y: {self.ymin} - {self.ymax}",
+            f"color mode: {self.color_mode}",
+            f"color palette: {self.palette}",
+            f"color waves: {self.color_waves}",
+            f"max iterations: {self.max_iterations}",
+            f"power: {self.power}",
+            f"escape radius: {self.escape_radius}",
+            f"epsilon: {self.epsilon}",
+        ]

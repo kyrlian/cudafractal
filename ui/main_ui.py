@@ -1,31 +1,60 @@
 #!python3
 import cProfile
 import pygame
+import pygame.freetype as ft
 import argparse
 from ui.appState import AppState
-from fractal.fractal import compute_fractal, FRACTAL_MODES
+from fractal.fractal import compute_fractal, FRACTAL_NAMES
 
 def pygamemain():
-    def redraw(screen_surface, appstate):
+    def redraw(screen_surface, appstate, recalc=True):
         appstate.recalc_size()
         # output_array_rgb = pygame.PixelArray(screen_surface)
-        output_array_niter, output_array_z2, output_array_k, output_array_rgb = compute_fractal(
-            appstate.WINDOW_SIZE,
-            appstate.xmax,
-            appstate.xmin,
-            appstate.ymin,
-            appstate.ymax,
-            appstate.fractal_mode,
-            appstate.max_iterations,
-            appstate.power,
-            appstate.escape_radius,
-            appstate.epsilon,
-            appstate.juliaxy,
-            appstate.color_mode,
-            appstate.palette,
-            appstate.color_waves,
-        )
+        if recalc:
+            output_array_niter, output_array_z2, output_array_k, output_array_rgb = compute_fractal(
+                appstate.WINDOW_SIZE,
+                appstate.xmax,
+                appstate.xmin,
+                appstate.ymin,
+                appstate.ymax,
+                appstate.fractal_mode,
+                appstate.max_iterations,
+                appstate.power,
+                appstate.escape_radius,
+                appstate.epsilon,
+                appstate.juliaxy,
+                appstate.color_mode,
+                appstate.palette,
+                appstate.color_waves,
+            )
         pygame.pixelcopy.array_to_surface(screen_surface, output_array_rgb)
+        if appstate.show_info:
+            print_info(screen_surface)
+        pygame.display.flip()
+        return output_array_niter, output_array_z2, output_array_k, output_array_rgb
+
+    def print_info(screen_surface,  ni=None,k=None,fgcolor= pygame.Color('black'),bgcolor= pygame.Color('white'),):
+        info_position=(10,10)
+        lines = appstate.get_info()
+        if ni is not None :
+            lines.append(f"niter: {ni}")
+        if k is not None:
+            lines.append(f"k: {k}")
+        font = ft.SysFont("Arial", 12)
+        # draw a rectangle
+        def blit_text(surface, lines, pos, font):
+            x, y = pos
+            maxx,maxy=x,y
+            line_spacing=5
+            for line in lines:
+                bounding_rect = font.render_to(surface, (x, y), line, fgcolor,bgcolor)
+                y += bounding_rect.height+line_spacing  # Start on new row
+                maxx=max(bounding_rect.right,maxx)
+                maxy=y
+            return (maxx, maxy)
+        rect_bottom_left=blit_text(screen_surface, lines, info_position, font)
+        pygame.draw.rect(screen_surface, bgcolor, (info_position,rect_bottom_left))
+        blit_text(screen_surface, lines, info_position, font)
         pygame.display.flip()
 
     def printhelp(appstate):
@@ -42,20 +71,22 @@ def pygamemain():
         print(f"    r:  escape radius(4, {appstate.escape_radius})")
         print(f"    e:  epsilon (0.001, {appstate.epsilon})")
         print(f"    a:  epsilon=0 (0.001, {appstate.epsilon})")
-        print(f"    j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_MODES[appstate.fractal_mode].__name__})")
+        print(f"    j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_NAMES[appstate.fractal_mode]})")
+        print(f"    d:  display info")
         print(f"    backspace: reset")
         print(f"    q: quit")
         print(f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}")
 
     # Initialize pygame
     pygame.init()
-    appstate = AppState(FRACTAL_MODES)
+    ft.init()
+    appstate = AppState(FRACTAL_NAMES)
     screen_surface = pygame.display.set_mode(appstate.WINDOW_SIZE, pygame.HWSURFACE)
     # Get the PixelArray object for the screen
     # screen_pixels = pygame.PixelArray(screen_surface)
     # Init the display
     printhelp(appstate)
-    redraw(screen_surface, appstate)
+    output_array_niter, output_array_z2, output_array_k, output_array_rgb = redraw(screen_surface, appstate)
     # Run the game loop
     running = True
     while running:
@@ -122,6 +153,8 @@ def pygamemain():
                     case pygame.K_h:
                         printhelp(appstate)
                         doredraw = False
+                    case pygame.K_d:
+                        appstate.toggle_info()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 doredraw = True
                 # 1 - left click, 2 - middle click, 3 - right click, 4 - scroll up, 5 - scroll down
@@ -131,8 +164,14 @@ def pygamemain():
                     appstate.zoom_out(pygame.mouse.get_pos())
                 elif event.button == 2:
                     appstate.change_fractal_mode(pygame.mouse.get_pos())
+            elif event.type == pygame.MOUSEMOTION:
+                # show info at cursor (ni, k...)
+                (mx,my) = pygame.mouse.get_pos()
+                ni = output_array_niter[mx,my]
+                k = output_array_k[mx,my]
+                print_info(screen_surface, ni, k)
             if doredraw:
-                redraw(screen_surface, appstate)
+                output_array_niter, output_array_z2, output_array_k, output_array_rgb = redraw(screen_surface, appstate)
             # NOTE - get_pressed() gives current state, not state of event
             # pygame.key.get_pressed()[pygame.K_q]
             # pygame.mouse.get_pressed()[0]
