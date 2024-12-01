@@ -1,10 +1,12 @@
 import math
 from numpy import complex128
 from dataclasses import dataclass
-from fractal.colors import ColorMode, Palette
+from fractal.colors import K_Mode, Palette_Mode
+from numpy import float64
+
 
 @dataclass
-class AppState():
+class AppState:
     def __init__(self, FRACTAL_NAMES):
         self.FRACTAL_NAMES = FRACTAL_NAMES
 
@@ -17,8 +19,8 @@ class AppState():
         self.escape_radius = 4
         self.epsilon = 0.001
         self.fractal_mode = 0
-        self.palette = Palette.HUE
-        self.color_mode = ColorMode.ITER_WAVES
+        self.palette_mode = Palette_Mode.HUE
+        self.k_mode = K_Mode.ITER_WAVES
         self.color_waves = 2
         self.juliaxy = complex128(0 + 0j)
         # UI variables
@@ -59,13 +61,15 @@ class AppState():
             f"Zoom {mouseX},{mouseY}, ({self.xcenter},{self.ycenter}), factor {zoom_rate}"
         )
 
-    def change_color_mode(self):
-        self.color_mode = (self.color_mode + 1) % len(ColorMode)
-        print(f"Color mode: {self.color_mode}")
+    def change_k_mode(self):
+        self.k_mode = (self.k_mode + 1) % len(K_Mode)
+        print(f"K mode: {self.k_mode}:  {K_Mode(self.k_mode).name}")
 
-    def change_color_palette(self):
-        self.palette = (self.palette + 1) % len(Palette)
-        print(f"Palette: {self.palette}")
+    def change_color_palette_mode(self):
+        self.palette_mode = (self.palette_mode + 1) % len(Palette_Mode)
+        print(
+            f"Palette mode: {self.palette_mode}: {Palette_Mode(self.palette_mode).name}"
+        )
 
     def change_color_waves(self, plusminus):
         self.color_waves = self.color_waves + plusminus
@@ -103,9 +107,7 @@ class AppState():
             / self.DISPLAY_HEIGTH
         )
         self.juliaxy = complex128(juliax + juliay * 1j)
-        print(
-            f"Fractal mode: {self.FRACTAL_NAMES[self.fractal_mode]}"
-        )
+        print(f"Fractal mode: {self.FRACTAL_NAMES[self.fractal_mode]}")
 
     def recalc_size(self):
         xwidth = self.yheight * self.DISPLAY_WIDTH / self.DISPLAY_HEIGTH
@@ -117,20 +119,53 @@ class AppState():
     def pan(self, x, y):
         self.xcenter += x * self.PAN_SPEED * (self.xmax - self.xmin)
         self.ycenter += y * self.PAN_SPEED * (self.ymax - self.ymin)
-    
+
     def toggle_info(self):
         self.show_info = not self.show_info
 
     def get_info(self):
         return [
-            f"Fractal mode: {self.FRACTAL_NAMES[self.fractal_mode]}",  
+            f"Fractal mode: {self.FRACTAL_NAMES[self.fractal_mode]}",
             f"x: {self.xmin} - {self.xmax}",
             f"y: {self.ymin} - {self.ymax}",
-            f"color mode: {ColorMode(self.color_mode).name}",
-            f"color palette: {Palette(self.palette).name}",
+            f"K mode: {K_Mode(self.k_mode).name}",
+            f"Palette mode: {Palette_Mode(self.palette_mode).name}",
             f"color waves: {self.color_waves}",
             f"max iterations: {self.max_iterations}",
             f"power: {self.power}",
             f"escape radius: {self.escape_radius}",
             f"epsilon: {self.epsilon}",
         ]
+
+    def get_info_table(self):
+        info_table = {}
+        info_table["fractal_mode"] = self.fractal_mode
+        info_table["xmin"] = self.xmin
+        info_table["xmax"] = self.xmax
+        info_table["ymin"] = self.ymin
+        info_table["ymaw"] = self.ymax
+        info_table["k_mode"] = self.k_mode
+        info_table["palette_mode"] = self.palette_mode
+        info_table["color_waves"] = self.color_waves
+        info_table["max_iterations"] = self.max_iterations
+        info_table["power"] = self.power
+        info_table["escape_radius"] = self.escape_radius
+        info_table["epsilon"] = self.epsilon
+        return info_table
+
+    def set_from_info_table(self, info_table):
+        self.fractal_mode = int(info_table["fractal_mode"])
+        self.xmin = float64(info_table["xmin"])
+        self.xmax = float64(info_table["xmax"])
+        self.ymin = float64(info_table["ymin"])
+        self.ymax = float64(info_table["ymaw"])
+        self.k_mode = int(info_table["k_mode"])
+        self.palette_mode = int(info_table["palette_mode"])
+        self.color_waves = int(info_table["color_waves"])
+        self.max_iterations = int(info_table["max_iterations"])
+        self.power = int(info_table["power"])
+        self.escape_radius = float64(info_table["escape_radius"])
+        self.epsilon = float64(info_table["epsilon"])
+        self.xcenter = self.xmin + (self.xmax - self.xmin)/2
+        self.ycenter = self.ymin + (self.ymax - self.ymin)/2
+        self.yheight = self.ymax - self.ymin

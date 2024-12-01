@@ -22,8 +22,8 @@ def mandelbrot_xy(
     escape_radius,
     eps,
     juliaxy,
-    color_mode,
-    palette,
+    k_mode,
+    palette_mode,
     color_waves,
 ) -> None:
     c: complex128 = complex128(topleft + x * xstep - 1j * y * ystep)
@@ -49,10 +49,10 @@ def mandelbrot_xy(
         z2,
         escape_radius,
         der2,
-        color_mode,
+        k_mode,
         color_waves,
     )
-    set_pixel_color(device_array_rgb, device_array_k, x, y, palette)
+    set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode)
 
 
 @cuda_jit()
@@ -69,8 +69,8 @@ def mandelbrot_kernel(
     escape_radius,
     eps,
     juliaxy,
-    color_mode,
-    palette,
+    k_mode,
+    palette_mode,
     color_waves,
 ) -> None:
     x, y = cuda_grid(2)
@@ -90,8 +90,8 @@ def mandelbrot_kernel(
             escape_radius,
             eps,
             juliaxy,
-            color_mode,
-            palette,
+            k_mode,
+            palette_mode,
             color_waves,
         )
 
@@ -112,8 +112,8 @@ def julia_xy(
     escape_radius,
     eps,
     juliaxy,
-    color_mode,
-    palette,
+    k_mode,
+    palette_mode,
     color_waves,
 ) -> None:
     z = complex128(topleft + x * xstep - 1j * y * ystep)
@@ -139,10 +139,10 @@ def julia_xy(
         z2,
         escape_radius,
         der2,
-        color_mode,
+        k_mode,
         color_waves,
     )
-    set_pixel_color(device_array_rgb, device_array_k, x, y, palette)
+    set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode)
 
 
 @cuda_jit()
@@ -159,8 +159,8 @@ def julia_kernel(
     escape_radius,
     eps,
     juliaxy,
-    color_mode,
-    palette,
+    k_mode,
+    palette_mode,
     color_waves,
 ) -> None:
     x, y = cuda_grid(2)
@@ -180,8 +180,8 @@ def julia_kernel(
             escape_radius,
             eps,
             juliaxy,
-            color_mode,
-            palette,
+            k_mode,
+            palette_mode,
             color_waves,
         )
 
@@ -202,8 +202,8 @@ def compute_fractal(
     escape_radius,
     epsilon,
     juliaxy,
-    color_mode,
-    palette,
+    k_mode,
+    palette_mode,
     color_waves,
 ):
     timerstart = timeit.default_timer()
@@ -235,8 +235,8 @@ def compute_fractal(
             escape_radius,
             epsilon,
             juliaxy,
-            color_mode,
-            palette,
+            k_mode,
+            palette_mode,
             color_waves,
         )
         output_array_niter = device_array_niter.copy_to_host()
@@ -262,8 +262,8 @@ def compute_fractal(
                     escape_radius,
                     epsilon,
                     juliaxy,
-                    color_mode,
-                    palette,
+                    k_mode,
+                    palette_mode,
                     color_waves,
                 )
         output_array_niter = device_array_niter

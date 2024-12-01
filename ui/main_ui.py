@@ -5,10 +5,11 @@ import pygame.freetype as ft
 import argparse
 from ui.appState import AppState
 from fractal.fractal import compute_fractal, FRACTAL_NAMES
-from fractal.colors import ColorMode, Palette
+from fractal.colors import K_Mode, Palette_Mode
+from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 
-
-def pygamemain():
+def pygamemain(src_image=None):
     def redraw(screen_surface, appstate, recalc=True):
         appstate.recalc_size()
         # output_array_rgb = pygame.PixelArray(screen_surface)
@@ -26,8 +27,8 @@ def pygamemain():
                     appstate.escape_radius,
                     appstate.epsilon,
                     appstate.juliaxy,
-                    appstate.color_mode,
-                    appstate.palette,
+                    appstate.k_mode,
+                    appstate.palette_mode,
                     appstate.color_waves,
                 )
             )
@@ -82,43 +83,60 @@ def pygamemain():
         blit_text(screen_surface, lines, info_position, font)
         pygame.display.flip()
 
-    def printhelp(appstate):
+    def print_help(appstate):
         print("Help:")
-        print(f"    key(s): role, (default, current)")
-        print(f"    z, left click: zoom in")
-        print(f"    s, right click: zoom out")
-        print(f"    up, down, left, right: pan")
-        print(
-            f"    k:  color mode (0, {appstate.color_mode}:{ColorMode(appstate.color_mode).name})"
-        )
-        print(
-            f"    c:  color palette (0, {appstate.palette}:{Palette(appstate.palette).name})"
-        )
-        print(f"    w:  color waves (1, {appstate.color_waves})")
+        print("    key(s): role, (default, current)")
+        print("    z, left click: zoom in")
+        print("    shift+z, right click: zoom out")
+        print("    up, down, left, right: pan")
+        print(f"    k:  k mode (0, {appstate.k_mode}:{K_Mode(appstate.k_mode).name})")
+        print(f"    c:  palette mode (0, {appstate.palette_mode}:{Palette_Mode(appstate.palette_mode).name})")
+        print(f"    w:  color waves (2, {appstate.color_waves})")
         print(f"    i:  max iterations (1000, {appstate.max_iterations})")
         print(f"    p:  power(2, {appstate.power})")
         print(f"    r:  escape radius(4, {appstate.escape_radius})")
         print(f"    e:  epsilon (0.001, {appstate.epsilon})")
         print(f"    a:  epsilon=0 (0.001, {appstate.epsilon})")
-        print(
-            f"    j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_NAMES[appstate.fractal_mode]})"
-        )
-        print(f"    d:  display info")
-        print(f"    backspace: reset")
-        print(f"    q: quit")
-        print(
-            f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}"
-        )
+        print(f"    j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_NAMES[appstate.fractal_mode]})")
+        print("    d:  display info")
+        print("    backspace: reset")
+        print("    q: quit")
+        print(f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}")
+
+    def screenshot(appstate):
+        filename = "screenshot.png"
+        # TODO - add timestamp
+        pygame.image.save(screen_surface, filename)
+        # add metadata
+        metadata_info = appstate.get_info_table()
+        targetImage = Image.open(filename)
+        metadata = PngInfo()
+        for key, value in metadata_info.items():
+            metadata.add_text(key, f"{value}")
+        targetImage.save(filename, pnginfo=metadata)
+        print(f"Saved screenshot to {filename}")
+
+
+    def load_metada(filename,appstate):
+        print(f"Loading metadata from {filename}")
+        srcImage = Image.open(filename)
+        srcImage.load()
+        info_table = srcImage.info
+        appstate.set_from_info_table(info_table)
+        return info_table
+
 
     # Initialize pygame
     pygame.init()
     ft.init()
     appstate = AppState(FRACTAL_NAMES)
-    screen_surface = pygame.display.set_mode(appstate.WINDOW_SIZE, pygame.HWSURFACE)
-    # Get the PixelArray object for the screen
-    # screen_pixels = pygame.PixelArray(screen_surface)
+    # Load metadata from image if present
+    if src_image is not None:
+        load_metada(src_image,appstate)
     # Init the display
-    printhelp(appstate)
+    screen_surface = pygame.display.set_mode(appstate.WINDOW_SIZE, pygame.HWSURFACE)
+    print_help(appstate)
+    # Initial draw
     output_array_niter, output_array_z2, output_array_k, output_array_rgb = redraw(
         screen_surface, appstate
     )
@@ -139,9 +157,12 @@ def pygamemain():
                     case pygame.K_q:
                         running = doredraw = False
                     case pygame.K_z:
-                        appstate.zoom_in()
+                        if shift:
+                            appstate.zoom_out()
+                        else:
+                            appstate.zoom_in()
                     case pygame.K_s:
-                        appstate.zoom_out()
+                        screenshot(appstate)
                     case pygame.K_UP:
                         appstate.pan(0, 1)
                     case pygame.K_DOWN:
@@ -157,9 +178,9 @@ def pygamemain():
                             appstate.change_max_iterations(1.1)
                     case pygame.K_r:
                         if shift:
-                            appstate.change_escaper(0.5)
+                            appstate.change_escape_radius(0.5)
                         else:
-                            appstate.change_escaper(2)
+                            appstate.change_escape_radius(2)
                     case pygame.K_a:
                         appstate.change_epsilon(0)
                     case pygame.K_e:
@@ -175,9 +196,9 @@ def pygamemain():
                     case pygame.K_j:
                         appstate.change_fractal_mode(pygame.mouse.get_pos())
                     case pygame.K_k:
-                        appstate.change_color_mode()
+                        appstate.change_k_mode()
                     case pygame.K_c:
-                        appstate.change_color_palette()
+                        appstate.change_color_palette_mode()
                     case pygame.K_w:
                         if shift:
                             appstate.change_color_waves(-1)
@@ -186,7 +207,7 @@ def pygamemain():
                     case pygame.K_BACKSPACE:
                         appstate.reset()
                     case pygame.K_h:
-                        printhelp(appstate)
+                        print_help(appstate)
                         doredraw = False
                     case pygame.K_d:
                         appstate.toggle_info()
@@ -227,14 +248,20 @@ def main():
     parser.add_argument(
         "-p", "--profile", help="activate profiling", action="store_true"
     )
+    parser.add_argument(
+        "-s", "--source", help="source image"
+    )
+    # TODO - enable to pass an image to read the metadata from (see load_metada )
     parser.add_argument("-c", "--cpu", help="compute on cpu only", action="store_true")
     args = parser.parse_args()
     if args.profile:
         # https://docs.python.org/3.8/library/profile.html#module-cProfile
         cProfile.run("pygamemain()", sort="cumtime")
     else:
-        pygamemain()
-
+        if args.source is not None:
+            pygamemain(args.source)
+        else:
+            pygamemain()
 
 if __name__ == "__main__":
     main()
