@@ -127,22 +127,26 @@ def set_pixel_k(
     device_array_k[x, y] = k
 
 
-def build_custom_palette_mode(color_list: List[Color], steps):
+def build_custom_palette(color_list: List[Color], steps):
     if len(color_list) == 0:
         color_list.append(Color("white"))
     if len(color_list) == 1:
         color_list.append(Color("black"))
     steps_by_color = int(steps / (len(color_list) - 1))
-    palette_mode = []
+    custom_palette = []
     for i in range(len(color_list) - 1):
         ColorA = color_list[i]
         ColorB = color_list[i + 1]
         for j in range(steps_by_color):
             InterimColor = ColorA.lerp(ColorB, j / steps_by_color)
-            palette_mode.append(InterimColor)
-    return palette_mode
+            packed = (InterimColor.r * 256 + InterimColor.g) * 256 + InterimColor.b
+            custom_palette.append(packed)
+    return custom_palette
 
+
+def init_custom_palette_sample():
+    return build_custom_palette([Color("Black"),Color("Red"),Color("White")], 1000)
 
 @cuda_jit(device=True)
-def get_custom_palette_mode_color(palette_mode, x):
-    return palette_mode[x % len(palette_mode)]
+def get_custom_palette_mode_color(custom_palette, x):
+    return custom_palette[x % len(custom_palette)]
