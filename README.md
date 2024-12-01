@@ -31,3 +31,8 @@ Run with without cuda:
 ```sh
 uv run ui/main_ui.py
 ```
+
+Load metadata from a previous screenshot
+```sh
+uv run ui/main_ui.py -s screenshot.png
+```
