@@ -39,8 +39,7 @@ def pygamemain():
 
     def print_info(
         screen_surface,
-        ni=None,
-        k=None,
+        ni=None, z2=None, k=None, rgb=None,
         bgcolor=pygame.Color("white"),
         fgcolor=pygame.Color("black"),
     ):
@@ -50,8 +49,12 @@ def pygamemain():
         lines = appstate.get_info()
         if ni is not None:
             lines.append(f"niter: {ni}")
+        if z2 is not None:
+            lines.append(f"z2: {z2}")
         if k is not None:
             lines.append(f"k: {k}")
+        if rgb is not None:
+            lines.append(f"rgb: {rgb}")
         font = ft.SysFont("Arial", 12)
 
         # draw a rectangle
@@ -200,8 +203,10 @@ def pygamemain():
                 # show info at cursor (ni, k...)
                 (mx, my) = pygame.mouse.get_pos()
                 ni = output_array_niter[mx, my]
+                z2 = output_array_z2[mx, my]
                 k = output_array_k[mx, my]
-                print_info(screen_surface, ni, k)
+                rgb = output_array_rgb[mx, my]
+                print_info(screen_surface, ni, z2, k, rgb)
             if doredraw:
                 (
                     output_array_niter,
