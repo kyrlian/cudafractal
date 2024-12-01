@@ -1,8 +1,7 @@
 import math
-from numpy import float64, complex128 
-# from numba import float64, complex128
+from numpy import complex128
 from dataclasses import dataclass
-from fractal_cuda.colors_cuda import ColorMode, Palette
+from fractal.colors import ColorMode, Palette
 
 @dataclass
 class AppState():

@@ -3,23 +3,9 @@ import cProfile
 import pygame
 import argparse
 from ui.appState import AppState
+from fractal.fractal import compute_fractal, FRACTAL_MODES
 
-def load_driver(cpu_only: bool):
-    if not cpu_only:
-        try:
-            from numba import cuda
-            if cuda.is_available():
-                print("cuda detected")
-                from fractal_cuda.fractal_cuda import compute_fractal, FRACTAL_MODES
-                return compute_fractal, FRACTAL_MODES
-        except Exception:
-            print("Error importing numba.cuda")
-    print("NOT using cuda")
-    from fractal_no_cuda.fractal_no_cuda import compute_fractal, FRACTAL_MODES
-    return compute_fractal, FRACTAL_MODES
-
-
-def pygamemain(compute_fractal, FRACTAL_MODES):
+def pygamemain():
     def redraw(screen_surface, appstate):
         appstate.recalc_size()
         # output_array_rgb = pygame.PixelArray(screen_surface)
@@ -162,12 +148,11 @@ def main():
     )
     parser.add_argument("-c", "--cpu", help="compute on cpu only", action="store_true")
     args = parser.parse_args()
-    compute_fractal, FRACTAL_MODES = load_driver(args.cpu)
     if args.profile:
         # https://docs.python.org/3.8/library/profile.html#module-cProfile
-        cProfile.run("pygamemain(compute_fractal, FRACTAL_MODES)", sort="cumtime")
+        cProfile.run("pygamemain()", sort="cumtime")
     else:
-        pygamemain(compute_fractal, FRACTAL_MODES)
+        pygamemain()
 
 
 if __name__ == "__main__":
