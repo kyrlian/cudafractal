@@ -60,7 +60,10 @@ def set_pixel_color(device_array_rgb, device_array_k, x, y,  palette):
     k = device_array_k[x,y]
     match palette:
         case Palette.HUE:
-            set_color_hsv(device_array_rgb, x, y, k, 1, 1)
+            if k ==0:
+                set_color_rgb(device_array_rgb, x, y, 0,0,0)
+            else:
+                set_color_hsv(device_array_rgb, x, y, k, 1, 1)
         case Palette.GRAYSCALE:
             kk = int(k * 255)
             set_color_rgb(device_array_rgb, x, y, kk, kk, kk)
@@ -115,3 +118,14 @@ def set_pixel_k(
                 # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
                 k = 1 / z2
     device_array_k[x, y] = k
+
+def build_custom_palette(colorA,colorB,steps):
+    palette = []
+    for i in range(0, steps):
+        r = colorA.r * (steps - i) / steps + colorB.r * i / steps
+        g = colorA.g * (steps - i) / steps + colorB.g * i / steps
+        b = colorA.b * (steps - i) / steps + colorB.b * i / steps
+        palette.append((r, g, b))
+    return palette
+
+def get_custom_palette_color(palette,x): return palette[x % len(palette)]
