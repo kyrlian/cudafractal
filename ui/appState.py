@@ -2,7 +2,6 @@ import math
 from numpy import complex128
 from dataclasses import dataclass
 from fractal.colors import ColorMode, Palette
-import pygame
 
 @dataclass
 class AppState():
@@ -127,8 +126,8 @@ class AppState():
             f"Fractal mode: {self.FRACTAL_NAMES[self.fractal_mode]}",  
             f"x: {self.xmin} - {self.xmax}",
             f"y: {self.ymin} - {self.ymax}",
-            f"color mode: {self.color_mode}",
-            f"color palette: {self.palette}",
+            f"color mode: {ColorMode(self.color_mode).name}",
+            f"color palette: {Palette(self.palette).name}",
             f"color waves: {self.color_waves}",
             f"max iterations: {self.max_iterations}",
             f"power: {self.power}",
