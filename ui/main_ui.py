@@ -3,28 +3,9 @@ import cProfile
 import pygame
 import argparse
 from ui.appState import AppState
+from fractal.fractal import compute_fractal, FRACTAL_MODES
 
-def load_driver(cpu_only: bool):
-    if cpu_only:
-        from fractal_no_cuda.fractal_no_cuda import compute_fractal, FRACTAL_MODES
-        return compute_fractal, FRACTAL_MODES
-    else:
-        try:
-            from numba import cuda
-        except Exception:
-            print(f"Error importing numba.cuda: {Exception}")
-        # CUDA_AVAILABLE = cuda.detect()
-        if cuda.is_available():
-            print("cuda detected")
-            from fractal_cuda.fractal_cuda import compute_fractal, FRACTAL_MODES
-            return compute_fractal, FRACTAL_MODES
-        else:
-            print("cuda NOT detected")
-            from fractal_no_cuda.utils_no_cuda import compute_fractal, FRACTAL_MODES
-            return compute_fractal, FRACTAL_MODES
-
-
-def pygamemain(compute_fractal, FRACTAL_MODES):
+def pygamemain():
     def redraw(screen_surface, appstate):
         appstate.recalc_size()
         # output_array_rgb = pygame.PixelArray(screen_surface)
@@ -48,31 +29,27 @@ def pygamemain(compute_fractal, FRACTAL_MODES):
         pygame.display.flip()
 
     def printhelp(appstate):
-        print("Help: ")
-        print("key(s): role, (default, current)")
-        print("z, left click: zoom in")
-        print("s, right click: zoom out")
-        print("up, down, left, right: pan")
-        print(f"k:  color mode (0, {appstate.color_mode})")
-        print(f"c:  color palette (0, {appstate.palette})")
-        print(f"w:  color waves (1, {appstate.color_waves})")
-        print(f"i:  max iterations (1000, {appstate.max_iterations})")
-        print(f"p:  power(2, {appstate.power})")
-        print(f"r:  escape radius(4, {appstate.escape_radius})")
-        print(f"e:  epsilon (0.001, {appstate.epsilon})")
-        print(f"a:  epsilon=0 (0.001, {appstate.epsilon})")
-        print(
-            f"j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_MODES[appstate.fractal_mode].__name__})"
-        )
-        print("backspace: reset")
-        print("q: quit")
-        print(
-            f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}"
-        )
+        print("Help:")
+        print(f"    key(s): role, (default, current)")
+        print(f"    z, left click: zoom in")
+        print(f"    s, right click: zoom out")
+        print(f"    up, down, left, right: pan")
+        print(f"    k:  color mode (0, {appstate.color_mode})")
+        print(f"    c:  color palette (0, {appstate.palette})")
+        print(f"    w:  color waves (1, {appstate.color_waves})")
+        print(f"    i:  max iterations (1000, {appstate.max_iterations})")
+        print(f"    p:  power(2, {appstate.power})")
+        print(f"    r:  escape radius(4, {appstate.escape_radius})")
+        print(f"    e:  epsilon (0.001, {appstate.epsilon})")
+        print(f"    a:  epsilon=0 (0.001, {appstate.epsilon})")
+        print(f"    j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_MODES[appstate.fractal_mode].__name__})")
+        print(f"    backspace: reset")
+        print(f"    q: quit")
+        print(f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}")
 
     # Initialize pygame
     pygame.init()
-    appstate = AppState()
+    appstate = AppState(FRACTAL_MODES)
     screen_surface = pygame.display.set_mode(appstate.WINDOW_SIZE, pygame.HWSURFACE)
     # Get the PixelArray object for the screen
     # screen_pixels = pygame.PixelArray(screen_surface)
@@ -171,12 +148,11 @@ def main():
     )
     parser.add_argument("-c", "--cpu", help="compute on cpu only", action="store_true")
     args = parser.parse_args()
-    compute_fractal, FRACTAL_MODES = load_driver(args.cpu)
     if args.profile:
         # https://docs.python.org/3.8/library/profile.html#module-cProfile
-        cProfile.run("pygamemain(compute_fractal, FRACTAL_MODES)", sort="cumtime")
+        cProfile.run("pygamemain()", sort="cumtime")
     else:
-        pygamemain(compute_fractal, FRACTAL_MODES)
+        pygamemain()
 
 
 if __name__ == "__main__":

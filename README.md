@@ -2,8 +2,7 @@
 
 ## Requirements
 
-The cuda version requires [cuda](https://developer.nvidia.com/cuda-downloads) - you can install only the compiler (CUDA/Development/Compiler) & libraries (CUDA/Runtime/Libraries)
-
+- The cuda version requires [cuda](https://developer.nvidia.com/cuda-downloads) - you can install only the compiler (CUDA/Development/Compiler) & libraries (CUDA/Runtime/Libraries)
 
 ## Install as uv tool from git
 
@@ -25,15 +24,10 @@ cd fractal-python-cuda
 ```
 Run with 
 ```sh
+uv run --extra cuda ui/main_ui.py 
+```
+
+Run with without cuda:
+```sh
 uv run ui/main_ui.py
-```
-
-## Or with pip
-
-```sh
-pip install -r requirements.txt
-```
-Run with 
-```sh
-python ui/main_ui.py
 ```

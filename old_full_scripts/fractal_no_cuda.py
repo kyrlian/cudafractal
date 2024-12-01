@@ -137,9 +137,7 @@ def create_image(
     fractalmode(
         pixels, topleft, xstep, ystep, maxiter, p, r, eps, jx, jy, cmode, palette
     )
-    print(
-        "Frame calculated in %f s \n" % (timeit.default_timer() - timerstart)
-    )
+    print("Frame calculated in %f s \n" % (timeit.default_timer() - timerstart))
 
 
 def create_image_profiling():
@@ -266,9 +264,7 @@ def pygamemain():
         currentfractalmode = (currentfractalmode + 1) % len(fractalmodes)
         juliax = xmin + mouseX * (xmax - xmin) / display_width
         juliay = ymin + (display_heigth - mouseY) * (ymax - ymin) / display_heigth
-        print(
-            "Fractal mode: %s \n" % fractalmodes[currentfractalmode].__name__
-        )
+        print("Fractal mode: %s \n" % fractalmodes[currentfractalmode].__name__)
 
     def printhelp():
         print("Help: ")
