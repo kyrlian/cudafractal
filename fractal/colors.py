@@ -1,6 +1,6 @@
 from math import log
 from enum import IntEnum
-from numpy import float64
+from numpy import int32, int64, float64
 from fractal.utils_cuda import cuda_jit
 from pygame import Color
 from typing import List
@@ -21,15 +21,20 @@ class Palette_Mode(IntEnum):
     CUSTOM = 2
 
 
-@cuda_jit(device=True)
-def set_color_rgb(device_array_rgb, x, y, r, g, b):
+@cuda_jit("int32(uint32[:,:], int32, int32, int32, int32, int32)", device=True)
+def set_color_rgb(device_array_rgb, x, y, r, g, b) -> int32:
     # r, g, b should be [0:255]
+    # Cant assert in device function
+    # assert r >= 0 and r <= 255, f"r should be in [0:255], got {r}"
+    # assert g >=  0 and g  <= 255, f"g should be in [0:255], got {g}"
+    # assert b >=  0 and b  <= 255, f"b should be in [0:255], got {b}"
     packed = (r * 256 + g) * 256 + b
     device_array_rgb[x, y] = packed
+    return packed
 
 
-@cuda_jit(device=True)
-def set_color_hsv(device_array_rgb, x, y, h, s, v):
+@cuda_jit("int32(uint32[:,:],  int32, int32, int32, int32, int32)", device=True)
+def set_color_hsv(device_array_rgb, x, y, h, s, v) -> int32:
     # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
     if s > 0:
@@ -56,11 +61,14 @@ def set_color_hsv(device_array_rgb, x, y, h, s, v):
             r, g, b = v, w, q
     else:
         r, g, b = v, v, v
-    set_color_rgb(device_array_rgb, x, y, int(r * 255), int(g * 255), int(b * 255))
+    return set_color_rgb(
+        device_array_rgb, x, y, int(r * 255), int(g * 255), int(b * 255)
+    )
 
-@cuda_jit(device=True)
-def set_color_custom(device_array_rgb, x, y, k:float64):
-    colors = ((0.0, 0, 0, 0) , (0.5, 255, 0,0),(1.0, 255, 255, 255))
+
+@cuda_jit("int32(uint32[:,:],  int32, int32, float64)", device=True)
+def set_color_custom(device_array_rgb, x, y, k: float64) -> int32:
+    colors = ((0.0, 0, 0, 0), (0.5, 255, 0, 0), (1.0, 255, 255, 255))
     for i in range(len(colors) - 1):
         color_a_k, color_a_red, color_a_green, color_a_blue = colors[i]
         color_b_k, color_b_red, color_b_green, color_b_blue = colors[i + 1]
@@ -70,25 +78,28 @@ def set_color_custom(device_array_rgb, x, y, k:float64):
             r = int(color_a_red * ratio_a + color_b_red * ratio_b)
             g = int(color_a_green * ratio_a + color_b_green * ratio_b)
             b = int(color_a_blue * ratio_a + color_b_blue * ratio_b)
-            set_color_rgb(device_array_rgb, x, y, r, g, b)
+            return set_color_rgb(device_array_rgb, x, y, r, g, b)
+    return int32(0)
+
 
 @cuda_jit(device=True)
-def set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode):
+def set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode) -> int32:
     # calculate color from k
     k = device_array_k[x, y]
     match palette_mode:
         case Palette_Mode.HUE:
             if k == 0.0:
-                set_color_rgb(device_array_rgb, x, y, 0, 0, 0)
+                return set_color_rgb(device_array_rgb, x, y, 0, 0, 0)
             else:
-                set_color_hsv(device_array_rgb, x, y, k, 1, 1)
+                return set_color_hsv(device_array_rgb, x, y, k, 1, 1)
         case Palette_Mode.GRAYSCALE:
             kk = int(k * 255)
-            set_color_rgb(device_array_rgb, x, y, kk, kk, kk)
+            return set_color_rgb(device_array_rgb, x, y, kk, kk, kk)
         case Palette_Mode.CUSTOM:  # custom palette_mode k to rgb
-            set_color_custom(device_array_rgb, x, y, k)
+            return set_color_custom(device_array_rgb, x, y, k)
         case _:
-            set_color_rgb(device_array_rgb, x, y, 255, 0, 0)
+            return set_color_rgb(device_array_rgb, x, y, 255, 0, 0)
+
 
 @cuda_jit(device=True)
 def set_pixel_k(
@@ -125,6 +136,7 @@ def set_pixel_k(
                 # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
                 k = 1 / z2
     device_array_k[x, y] = k
+    return k
 
 
 def build_custom_palette(color_list: List[Color], steps):
@@ -145,7 +157,8 @@ def build_custom_palette(color_list: List[Color], steps):
 
 
 def init_custom_palette_sample():
-    return build_custom_palette([Color("Black"),Color("Red"),Color("White")], 1000)
+    return build_custom_palette([Color("Black"), Color("Red"), Color("White")], 1000)
+
 
 @cuda_jit(device=True)
 def get_custom_palette_mode_color(custom_palette, x):
