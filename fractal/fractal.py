@@ -1,7 +1,7 @@
 import timeit
 import numpy
 from math import ceil
-from numpy import float64, complex128
+from numpy import int32, float64, complex128
 from fractal.colors import set_pixel_color, set_pixel_k
 from fractal.utils_cuda import cuda_jit, cuda_available, cuda_grid, compute_threadsperblock, init_array
 
@@ -25,10 +25,10 @@ def mandelbrot_xy(
     k_mode,
     palette_mode,
     color_waves,
-) -> None:
+):
     c: complex128 = complex128(topleft + x * xstep - 1j * y * ystep)
     z: complex128 = c
-    nb_iter: int = 0
+    nb_iter: int32 = 0
     z2: float64 = float64(0)
     der: complex128 = complex128(1 + 0j)
     der2: float64 = float64(1)
@@ -40,7 +40,7 @@ def mandelbrot_xy(
         der2 = der.real**2 + der.imag**2
     device_array_niter[x, y] = nb_iter
     device_array_z2[x, y] = z2
-    set_pixel_k(
+    k = set_pixel_k(
         device_array_k,
         x,
         y,
@@ -52,9 +52,11 @@ def mandelbrot_xy(
         k_mode,
         color_waves,
     )
-    set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode)
+    packedrgb = set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode)
+    return k, packedrgb
 
 
+# "void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32, int32)"
 @cuda_jit()
 def mandelbrot_kernel(
     device_array_niter,
@@ -115,7 +117,7 @@ def julia_xy(
     k_mode,
     palette_mode,
     color_waves,
-) -> None:
+) :
     z = complex128(topleft + x * xstep - 1j * y * ystep)
     nb_iter = 0
     z2 = float64(0)
@@ -130,7 +132,7 @@ def julia_xy(
         der2 = der.real**2 + der.imag**2
     device_array_niter[x, y] = nb_iter
     device_array_z2[x, y] = z2
-    set_pixel_k(
+    k=set_pixel_k(
         device_array_k,
         x,
         y,
@@ -142,7 +144,9 @@ def julia_xy(
         k_mode,
         color_waves,
     )
-    set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode)
+    packedrgb=set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode)
+    return k, packedrgb
+
 
 
 @cuda_jit()
@@ -247,7 +251,7 @@ def compute_fractal(
         fractal_method = FRACTAL_MODES[fractalmode]
         for x in range(device_array_niter.shape[0]):
             for y in range(device_array_niter.shape[1]):
-                fractal_method(
+                k, packedrgb = fractal_method(
                     x,
                     y,
                     device_array_niter,
