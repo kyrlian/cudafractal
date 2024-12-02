@@ -34,9 +34,11 @@ try:
 except ImportError:
     print("numba cuda not installed")
 
-    # If numba cuda is not installed, use a noop operations
-    def cuda_jit(func):
-        return func
+    # If numba cuda is not installed, use noop operations
+    def cuda_jit(func_or_sig=None, device=False, inline=False, link=[], debug=None, opt=True, lineinfo=False, cache=False, **kws):
+        def wrapper(func):
+            return func
+        return wrapper
 
     def cuda_detect():
         return False
@@ -52,4 +54,4 @@ except ImportError:
     
     def init_array(dimx, dimy, dtype):
         # device_array_niter = numpy.zeros((screenw, screenw, 1), dtype=numpy.uint32)
-        return numpy.zeros((dimx, dimy, 1), dtype=dtype)
+        return numpy.zeros((dimx, dimy), dtype=dtype)
