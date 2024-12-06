@@ -82,10 +82,12 @@ def set_color_custom(device_array_rgb, x, y, k: float64) -> int32:
     return int32(0)
 
 
-@cuda_jit(device=True)
-def set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode) -> int32:
+# @cuda_jit("int32(uint32[:,:], float64[:,:], int32, int32, int32)", device=True)
+# def set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode) -> int32:
+@cuda_jit("int32(uint32[:,:], float64, int32, int32, int32)", device=True)
+def set_pixel_color(device_array_rgb, k, x, y, palette_mode) -> int32:
     # calculate color from k
-    k = device_array_k[x, y]
+    # k = device_array_k[x, y]
     match palette_mode:
         case Palette_Mode.HUE:
             if k == 0.0:
@@ -101,7 +103,7 @@ def set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode) -> int
             return set_color_rgb(device_array_rgb, x, y, 255, 0, 0)
 
 
-@cuda_jit(device=True)
+@cuda_jit("int32(uint32[:,:], int32, int32, int32, int32, float64, int32, float64, int32, int32)", device=True)
 def set_pixel_k(
     device_array_k,
     x,
