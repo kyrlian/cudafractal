@@ -112,6 +112,7 @@ def pygamemain(src_image=None):
         targetImage = Image.open(filename)
         metadata = PngInfo()
         for key, value in metadata_info.items():
+            print(f"Adding metadata {key}:{value}")
             metadata.add_text(key, f"{value}")
         targetImage.save(filename, pnginfo=metadata)
         print(f"Saved screenshot to {filename}")
@@ -122,6 +123,7 @@ def pygamemain(src_image=None):
         srcImage = Image.open(filename)
         srcImage.load()
         info_table = srcImage.info
+        print(f"Metadata info_table: {info_table}")
         appstate.set_from_info_table(info_table)
         return info_table
 
