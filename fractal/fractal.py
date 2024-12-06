@@ -11,7 +11,7 @@ from fractal.utils_cuda import (
     init_array,
 )
 from enum import IntEnum
-
+from typing import Tuple
 
 class Fractal_Mode(IntEnum):
     MANDELBROT = 0
@@ -41,7 +41,7 @@ def fractal_xy(
     k_mode: int32,
     palette_mode: int32,
     color_waves: int32,
-):
+) ->  Tuple[int32, float64,float64,int32]:
     c: complex128 = (
         complex128(topleft + float64(x) * xstep - 1j * y * ystep)
         if fractalmode == Fractal_Mode.MANDELBROT
@@ -78,7 +78,7 @@ def fractal_xy(
     )
     k = device_array_k[x, y]
     packedrgb = set_pixel_color(device_array_rgb, x, y, k, palette_mode)
-    return k, packedrgb
+    return nb_iter, z2, k, packedrgb
 
 
 @cuda_jit("(int32[:,:], float64[:,:], float64[:,:], int32[:,:], complex128, float64, float64, int32, int32, int32, int32, float64, complex128, int32, int32, int32)")
@@ -179,12 +179,15 @@ def compute_fractal(
         output_array_k = device_array_k.copy_to_host()
         output_array_rgb = device_array_rgb.copy_to_host()
     else:  # No cuda
-        vectorized_fractal_xy = numpy.vectorize(fractal_xy)
-        for x in range(device_array_niter.shape[0]):
-            for y in range(device_array_niter.shape[1]):
-                k, packedrgb = fractal_xy(
-                    x,
-                    y,
+        vectorized_fractal_xy = numpy.vectorize(fractal_xy, otypes=[int32, float64, float64, int32])# fractal_xy returns nb_iter, z2, k, packedrgb 
+        vector_x = range(device_array_niter.shape[0])
+        vector_y = range(device_array_niter.shape[1])
+        result_arrays = vectorized_fractal_xy(vector_x,vector_y,
+        # for x in range(device_array_niter.shape[0]):
+        #     for y in range(device_array_niter.shape[1]):
+        #         k, packedrgb = fractal_xy(
+        #             x,
+        #             y,
                     device_array_niter,
                     device_array_z2,
                     device_array_k,
@@ -202,10 +205,11 @@ def compute_fractal(
                     palette_mode,
                     color_waves,
                 )
-        output_array_niter = device_array_niter
-        output_array_z2 = device_array_z2
-        output_array_k = device_array_k
-        output_array_rgb = device_array_rgb
+        output_array_niter, output_array_z2, output_array_k,  output_array_rgb = result_arrays
+        # output_array_niter = device_array_niter
+        # output_array_z2 = device_array_z2
+        # output_array_k = device_array_k
+        # output_array_rgb = device_array_rgb
 
     print(f"Frame calculated in {(timeit.default_timer() - timerstart)}s")
     return output_array_niter, output_array_z2, output_array_k, output_array_rgb
