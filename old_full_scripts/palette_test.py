@@ -1,8 +1,7 @@
 import math
-from numba import float64
+from numpy import float64
 from math import log
 import pygame
-
 
 def set_color_hue(pixel_array, x, y, k):
     # k should be [0:1]
