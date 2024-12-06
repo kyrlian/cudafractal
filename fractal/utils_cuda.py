@@ -27,7 +27,6 @@ try:
         return (mbx, mby)
 
     def init_array(dimx, dimy, dtype):
-        # device_array_niter = cuda.device_array((screenw, screenh), dtype=numpy.uint32)
         return cuda.device_array((dimx, dimy), dtype=dtype)
 
 
@@ -53,5 +52,4 @@ except ImportError:
         return (1, 1)
     
     def init_array(dimx, dimy, dtype):
-        # device_array_niter = numpy.zeros((screenw, screenw, 1), dtype=numpy.uint32)
         return numpy.zeros((dimx, dimy), dtype=dtype)

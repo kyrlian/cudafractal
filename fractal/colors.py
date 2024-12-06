@@ -1,6 +1,6 @@
 from math import log
 from enum import IntEnum
-from numpy import int32, int64, float64
+from numpy import int32, float64
 from fractal.utils_cuda import cuda_jit
 from pygame import Color
 from typing import List
@@ -21,8 +21,8 @@ class Palette_Mode(IntEnum):
     CUSTOM = 2
 
 
-@cuda_jit("int32(uint32[:,:], int32, int32, int32, int32, int32)", device=True)
-def set_color_rgb(device_array_rgb, x, y, r, g, b) -> int32:
+@cuda_jit("int32(int32[:,:], int32, int32, int32, int32, int32)", device=True)
+def set_color_rgb(device_array_rgb, x:int32, y:int32, r:int32, g:int32, b:int32) -> int32:
     # r, g, b should be [0:255]
     # Cant assert in device function
     # assert r >= 0 and r <= 255, f"r should be in [0:255], got {r}"
@@ -33,8 +33,8 @@ def set_color_rgb(device_array_rgb, x, y, r, g, b) -> int32:
     return packed
 
 
-@cuda_jit("int32(uint32[:,:],  int32, int32, int32, int32, int32)", device=True)
-def set_color_hsv(device_array_rgb, x, y, h, s, v) -> int32:
+@cuda_jit("int32(int32[:,:], int32, int32, float64, float64, float64)", device=True)
+def set_color_hsv(device_array_rgb, x:int32, y:int32, h: float64, s: float64, v: float64) -> int32:
     # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
     if s > 0:
@@ -66,8 +66,8 @@ def set_color_hsv(device_array_rgb, x, y, h, s, v) -> int32:
     )
 
 
-@cuda_jit("int32(uint32[:,:],  int32, int32, float64)", device=True)
-def set_color_custom(device_array_rgb, x, y, k: float64) -> int32:
+@cuda_jit("int32(int32[:,:],  int32, int32, float64)", device=True)
+def set_color_custom(device_array_rgb, x: int32, y: int32, k: float64) -> int32:
     colors = ((0.0, 0, 0, 0), (0.5, 255, 0, 0), (1.0, 255, 255, 255))
     for i in range(len(colors) - 1):
         color_a_k, color_a_red, color_a_green, color_a_blue = colors[i]
@@ -82,15 +82,13 @@ def set_color_custom(device_array_rgb, x, y, k: float64) -> int32:
     return int32(0)
 
 
-# @cuda_jit("int32(uint32[:,:], float64[:,:], int32, int32, int32)", device=True)
-# def set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode) -> int32:
-@cuda_jit("int32(uint32[:,:], float64, int32, int32, int32)", device=True)
-def set_pixel_color(device_array_rgb, k, x, y, palette_mode) -> int32:
+@cuda_jit("int32(int32[:,:], int32, int32, float64, int32)", device=True)
+def set_pixel_color(device_array_rgb, x: int32, y: int32, k: float64, palette_mode: int32) -> int32:
     # calculate color from k
     # k = device_array_k[x, y]
     match palette_mode:
         case Palette_Mode.HUE:
-            if k == 0.0:
+            if k == float(0.0):
                 return set_color_rgb(device_array_rgb, x, y, 0, 0, 0)
             else:
                 return set_color_hsv(device_array_rgb, x, y, k, 1, 1)
@@ -103,21 +101,24 @@ def set_pixel_color(device_array_rgb, k, x, y, palette_mode) -> int32:
             return set_color_rgb(device_array_rgb, x, y, 255, 0, 0)
 
 
-@cuda_jit("int32(uint32[:,:], int32, int32, int32, int32, float64, int32, float64, int32, int32)", device=True)
+@cuda_jit(
+    "int32(float64[:,:], int32, int32, int32, int32, float64, int32, float64, int32, int32)",
+    device=True,
+)
 def set_pixel_k(
     device_array_k,
-    x,
-    y,
-    nb_iter,
-    max_iterations,
-    z2,
-    escape_radius,
-    der2,
-    k_mode,
-    color_waves,
+    x: int32,
+    y: int32,
+    nb_iter: int32,
+    max_iterations: int32,
+    z2: float64,
+    escape_radius: int32,
+    der2: float64,
+    k_mode: int32,
+    color_waves: int32,
 ):
     # calculate k[0-1] based on k mode
-    k = 0.0
+    k = float64(0.0)
     if z2 > escape_radius:
         match k_mode:
             case K_Mode.ITER_WAVES:
@@ -161,7 +162,5 @@ def build_custom_palette(color_list: List[Color], steps):
 def init_custom_palette_sample():
     return build_custom_palette([Color("Black"), Color("Red"), Color("White")], 1000)
 
-
-@cuda_jit(device=True)
 def get_custom_palette_mode_color(custom_palette, x):
     return custom_palette[x % len(custom_palette)]

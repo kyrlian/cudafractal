@@ -1,9 +1,8 @@
 import math
-from numpy import complex128
+from numpy import int32, float64, complex128
 from dataclasses import dataclass
 from fractal.colors import K_Mode, Palette_Mode
 from fractal.fractal import Fractal_Mode
-from numpy import float64
 
 
 @dataclass
@@ -11,17 +10,17 @@ class AppState:
     def __init__(self):
 
         # fractal variables
-        self.xcenter = -0.5
-        self.ycenter = 0
-        self.yheight = 3
-        self.max_iterations = 1000
-        self.power = 2
-        self.escape_radius = 4
-        self.epsilon = 0.001
-        self.fractal_mode = Fractal_Mode.MANDELBROT
-        self.palette_mode = Palette_Mode.HUE
-        self.k_mode = K_Mode.ITER_WAVES
-        self.color_waves = 2
+        self.xcenter = float64(-0.5)
+        self.ycenter = float64(0)
+        self.yheight = float64(3)
+        self.max_iterations = int32(1000)
+        self.power = int32(2)
+        self.escape_radius = int32(4)
+        self.epsilon = float64(0.001)
+        self.fractal_mode = int32(Fractal_Mode.MANDELBROT)
+        self.palette_mode = int32(Palette_Mode.HUE)
+        self.k_mode = int32(K_Mode.ITER_WAVES)
+        self.color_waves = int32(2)
         self.juliaxy = complex128(0 + 0j)
         # UI variables
         self.show_info = True
@@ -143,7 +142,7 @@ class AppState:
         info_table["xmin"] = self.xmin
         info_table["xmax"] = self.xmax
         info_table["ymin"] = self.ymin
-        info_table["ymaw"] = self.ymax
+        info_table["ymax"] = self.ymax
         info_table["k_mode"] = self.k_mode
         info_table["palette_mode"] = self.palette_mode
         info_table["color_waves"] = self.color_waves
@@ -153,19 +152,26 @@ class AppState:
         info_table["epsilon"] = self.epsilon
         return info_table
 
+    def get_info_table_value(self, info_table, key, default):
+        if key in info_table:
+            return info_table[key]
+        else:
+            print(f"Key {key} not found in info table, using default value {default}")
+            return default
+
     def set_from_info_table(self, info_table):
-        self.fractal_mode = int(info_table["fractal_mode"])
-        self.xmin = float64(info_table["xmin"])
-        self.xmax = float64(info_table["xmax"])
-        self.ymin = float64(info_table["ymin"])
-        self.ymax = float64(info_table["ymaw"])
-        self.k_mode = int(info_table["k_mode"])
-        self.palette_mode = int(info_table["palette_mode"])
-        self.color_waves = int(info_table["color_waves"])
-        self.max_iterations = int(info_table["max_iterations"])
-        self.power = int(info_table["power"])
-        self.escape_radius = float64(info_table["escape_radius"])
-        self.epsilon = float64(info_table["epsilon"])
-        self.xcenter = self.xmin + (self.xmax - self.xmin)/2
-        self.ycenter = self.ymin + (self.ymax - self.ymin)/2
-        self.yheight = self.ymax - self.ymin
+        self.fractal_mode = int32(self.get_info_table_value(info_table,"fractal_mode",0))
+        self.xmin = float64(self.get_info_table_value(info_table,"xmin",-2.5))
+        self.xmax = float64(self.get_info_table_value(info_table,"xmax",1.5))
+        self.ymin = float64(self.get_info_table_value(info_table,"ymin",-1.5))
+        self.ymax = float64(self.get_info_table_value(info_table,"ymax",1.5))
+        self.k_mode = int32(self.get_info_table_value(info_table,"k_mode",0))
+        self.palette_mode = int32(self.get_info_table_value(info_table,"palette_mode",0))
+        self.color_waves = int32(self.get_info_table_value(info_table,"color_waves",2))
+        self.max_iterations = int32(self.get_info_table_value(info_table,"max_iterations",1000))
+        self.power = int32(self.get_info_table_value(info_table,"power",2))
+        self.escape_radius = int32(self.get_info_table_value(info_table,"escape_radius",4))
+        self.epsilon = float64(self.get_info_table_value(info_table,"epsilon",0.001))
+        self.xcenter = float64(self.xmin + (self.xmax - self.xmin)/2)
+        self.ycenter = float64(self.ymin + (self.ymax - self.ymin)/2)
+        self.yheight = float64(self.ymax - self.ymin)
