@@ -4,7 +4,7 @@ import pygame
 import pygame.freetype as ft
 import argparse
 from ui.appState import AppState
-from fractal.fractal import compute_fractal, FRACTAL_NAMES
+from fractal.fractal import compute_fractal, Fractal_Mode
 from fractal.colors import K_Mode, Palette_Mode
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
@@ -97,7 +97,7 @@ def pygamemain(src_image=None):
         print(f"    r:  escape radius(4, {appstate.escape_radius})")
         print(f"    e:  epsilon (0.001, {appstate.epsilon})")
         print(f"    a:  epsilon=0 (0.001, {appstate.epsilon})")
-        print(f"    j:  middle click: julia/mandelbrot (mandelbrot, {FRACTAL_NAMES[appstate.fractal_mode]})")
+        print(f"    j:  middle click: julia/mandelbrot (0, {appstate.fractal_mode}:{Fractal_Mode(appstate.fractal_mode).name})")
         print("    d:  display info")
         print("    backspace: reset")
         print("    q: quit")
@@ -129,7 +129,7 @@ def pygamemain(src_image=None):
     # Initialize pygame
     pygame.init()
     ft.init()
-    appstate = AppState(FRACTAL_NAMES)
+    appstate = AppState()
     # Load metadata from image if present
     if src_image is not None:
         load_metada(src_image,appstate)

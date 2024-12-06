@@ -2,13 +2,13 @@ import math
 from numpy import complex128
 from dataclasses import dataclass
 from fractal.colors import K_Mode, Palette_Mode
+from fractal.fractal import Fractal_Mode
 from numpy import float64
 
 
 @dataclass
 class AppState:
-    def __init__(self, FRACTAL_NAMES):
-        self.FRACTAL_NAMES = FRACTAL_NAMES
+    def __init__(self):
 
         # fractal variables
         self.xcenter = -0.5
@@ -18,7 +18,7 @@ class AppState:
         self.power = 2
         self.escape_radius = 4
         self.epsilon = 0.001
-        self.fractal_mode = 0
+        self.fractal_mode = Fractal_Mode.MANDELBROT
         self.palette_mode = Palette_Mode.HUE
         self.k_mode = K_Mode.ITER_WAVES
         self.color_waves = 2
@@ -98,7 +98,7 @@ class AppState:
 
     def change_fractal_mode(self, pos):
         (mouseX, mouseY) = pos
-        self.fractal_mode = (self.fractal_mode + 1) % len(self.FRACTAL_NAMES)
+        self.fractal_mode = (self.fractal_mode + 1) % len(Fractal_Mode)
         juliax = self.xmin + mouseX * (self.xmax - self.xmin) / self.DISPLAY_WIDTH
         juliay = (
             self.ymin
@@ -107,7 +107,7 @@ class AppState:
             / self.DISPLAY_HEIGTH
         )
         self.juliaxy = complex128(juliax + juliay * 1j)
-        print(f"Fractal mode: {self.FRACTAL_NAMES[self.fractal_mode]}")
+        print(f"Fractal mode: {Fractal_Mode(self.fractal_mode).name}")
 
     def recalc_size(self):
         xwidth = self.yheight * self.DISPLAY_WIDTH / self.DISPLAY_HEIGTH
@@ -125,7 +125,7 @@ class AppState:
 
     def get_info(self):
         return [
-            f"Fractal mode: {self.FRACTAL_NAMES[self.fractal_mode]}",
+            f"Fractal mode: {Fractal_Mode(self.fractal_mode).name}",
             f"x: {self.xmin} - {self.xmax}",
             f"y: {self.ymin} - {self.ymax}",
             f"K mode: {K_Mode(self.k_mode).name}",

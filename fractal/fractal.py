@@ -3,11 +3,23 @@ import numpy
 from math import ceil
 from numpy import int32, float64, complex128
 from fractal.colors import set_pixel_color, set_pixel_k
-from fractal.utils_cuda import cuda_jit, cuda_available, cuda_grid, compute_threadsperblock, init_array
+from fractal.utils_cuda import (
+    cuda_jit,
+    cuda_available,
+    cuda_grid,
+    compute_threadsperblock,
+    init_array,
+)
+from enum import IntEnum
 
 
-@cuda_jit()
-def mandelbrot_xy(
+class Fractal_Mode(IntEnum):
+    MANDELBROT = 0
+    JULIA = 1
+
+
+@cuda_jit("int32, int32, uint32[:,:], float64[:,:], uint32[:,:], uint32[:,:], complex128, float64, float64, int32, int32, int32,int32,float64, int32, int32,int32,int32)")
+def fractal_xy(
     x,
     y,
     device_array_niter,
@@ -17,6 +29,7 @@ def mandelbrot_xy(
     topleft,
     xstep,
     ystep,
+    fractalmode,
     max_iterations,
     p,
     escape_radius,
@@ -26,8 +39,12 @@ def mandelbrot_xy(
     palette_mode,
     color_waves,
 ):
-    c: complex128 = complex128(topleft + x * xstep - 1j * y * ystep)
-    z: complex128 = c
+    if fractalmode == Fractal_Mode.MANDELBROT:
+        c: complex128 = complex128(topleft + x * xstep - 1j * y * ystep)
+        z: complex128 = c
+    else:
+        c: complex128 = juliaxy
+        z: complex128 = complex128(topleft + x * xstep - 1j * y * ystep)
     nb_iter: int32 = 0
     z2: float64 = float64(0)
     der: complex128 = complex128(1 + 0j)
@@ -52,13 +69,16 @@ def mandelbrot_xy(
         k_mode,
         color_waves,
     )
-    packedrgb = set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode)
+    if k is None:#Cuda
+        k = device_array_k[x,y]
+    # packedrgb = set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode)
+    packedrgb = set_pixel_color(device_array_rgb, k, x, y, palette_mode)
     return k, packedrgb
 
 
-# "void(uint32[:,:], complex128, float64, float64, int32, int32, int32, float64, complex128, int32, int32, int32)"
-@cuda_jit()
-def mandelbrot_kernel(
+
+@cuda_jit("uint32[:,:], float64[:,:], uint32[:,:], uint32[:,:], complex128, float64, float64, int32, int32, int32, int32, float64, int32, int32, int32, int32)")
+def fractal_kernel(
     device_array_niter,
     device_array_z2,
     device_array_k,
@@ -66,6 +86,7 @@ def mandelbrot_kernel(
     topleft,
     xstep,
     ystep,
+    fractalmode,
     max_iterations,
     p,
     escape_radius,
@@ -77,7 +98,7 @@ def mandelbrot_kernel(
 ) -> None:
     x, y = cuda_grid(2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
-        mandelbrot_xy(
+        fractal_xy(
             x,
             y,
             device_array_niter,
@@ -87,6 +108,7 @@ def mandelbrot_kernel(
             topleft,
             xstep,
             ystep,
+            fractalmode,
             max_iterations,
             p,
             escape_radius,
@@ -97,102 +119,6 @@ def mandelbrot_kernel(
             color_waves,
         )
 
-
-@cuda_jit()
-def julia_xy(
-    x,
-    y,
-    device_array_niter,
-    device_array_z2,
-    device_array_k,
-    device_array_rgb,
-    topleft,
-    xstep,
-    ystep,
-    max_iterations,
-    p,
-    escape_radius,
-    eps,
-    juliaxy,
-    k_mode,
-    palette_mode,
-    color_waves,
-) :
-    z = complex128(topleft + x * xstep - 1j * y * ystep)
-    nb_iter = 0
-    z2 = float64(0)
-    der = complex128(1 + 0j)
-    der2 = float64(1)
-    while nb_iter < max_iterations and z2 < escape_radius and der2 > eps:
-        # TODO test julia with/without der
-        der = der * p * z
-        z = z**p + juliaxy
-        nb_iter += 1
-        z2 = z.real**2 + z.imag**2
-        der2 = der.real**2 + der.imag**2
-    device_array_niter[x, y] = nb_iter
-    device_array_z2[x, y] = z2
-    k=set_pixel_k(
-        device_array_k,
-        x,
-        y,
-        nb_iter,
-        max_iterations,
-        z2,
-        escape_radius,
-        der2,
-        k_mode,
-        color_waves,
-    )
-    packedrgb=set_pixel_color(device_array_rgb, device_array_k, x, y, palette_mode)
-    return k, packedrgb
-
-
-
-@cuda_jit()
-def julia_kernel(
-    device_array_niter,
-    device_array_z2,
-    device_array_k,
-    device_array_rgb,
-    topleft,
-    xstep,
-    ystep,
-    max_iterations,
-    p,
-    escape_radius,
-    eps,
-    juliaxy,
-    k_mode,
-    palette_mode,
-    color_waves,
-) -> None:
-    x, y = cuda_grid(2)
-    if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
-        julia_xy(
-            x,
-            y,
-            device_array_niter,
-            device_array_z2,
-            device_array_k,
-            device_array_rgb,
-            topleft,
-            xstep,
-            ystep,
-            max_iterations,
-            p,
-            escape_radius,
-            eps,
-            juliaxy,
-            k_mode,
-            palette_mode,
-            color_waves,
-        )
-
-
-FRACTAL_NAMES = ["mandelbrot", "julia"]
-FRACTAL_MODES = [mandelbrot_xy, julia_xy]
-FRACTAL_KERNELS = [mandelbrot_kernel, julia_kernel]
 
 def compute_fractal(
     WINDOW_SIZE,
@@ -225,7 +151,6 @@ def compute_fractal(
             ceil(screenw / threadsperblock[0]),
             ceil(screenh / threadsperblock[1]),
         )
-        fractal_kernel = FRACTAL_KERNELS[fractalmode]
         fractal_kernel[blockspergrid, threadsperblock](
             device_array_niter,
             device_array_z2,
@@ -234,6 +159,7 @@ def compute_fractal(
             topleft,
             xstep,
             ystep,
+            fractalmode,
             max_iterations,
             power,
             escape_radius,
@@ -248,10 +174,10 @@ def compute_fractal(
         output_array_k = device_array_k.copy_to_host()
         output_array_rgb = device_array_rgb.copy_to_host()
     else:  # No cuda
-        fractal_method = FRACTAL_MODES[fractalmode]
+        vectorized_fractal_xy = numpy.vectorize(fractal_xy)
         for x in range(device_array_niter.shape[0]):
             for y in range(device_array_niter.shape[1]):
-                k, packedrgb = fractal_method(
+                k, packedrgb = fractal_xy(
                     x,
                     y,
                     device_array_niter,
@@ -261,6 +187,7 @@ def compute_fractal(
                     topleft,
                     xstep,
                     ystep,
+                    fractalmode,
                     max_iterations,
                     power,
                     escape_radius,
