@@ -1,9 +1,10 @@
 from math import floor
-import numpy
+from numpy import zeros as np_zeros
 
 try:
-    from numba import cuda
     from numba.cuda import (
+        get_current_device as cuda_get_current_device,
+        device_array as cuda_device_array,
         jit as cuda_jit,
         detect as cuda_detect,
         is_available as cuda_available,
@@ -11,7 +12,7 @@ try:
     )
 
     def compute_threadsperblock():
-        gpu = cuda.get_current_device()
+        gpu = cuda_get_current_device()
         # https://stackoverflow.com/questions/48654403/how-do-i-know-the-maximum-number-of-threads-per-block-in-python-code-with-either
         # https://numba.pydata.org/numba-doc/dev/cuda/kernels.html#choosing-the-block-size
         # Best is to have fewer blocks with max thread per block (see cuda.detect)
@@ -27,7 +28,7 @@ try:
         return (mbx, mby)
 
     def init_array(dimx, dimy, dtype):
-        return cuda.device_array((dimx, dimy), dtype=dtype)
+        return cuda_device_array((dimx, dimy), dtype=dtype)
 
 
 except ImportError:
@@ -52,4 +53,4 @@ except ImportError:
         return (1, 1)
     
     def init_array(dimx, dimy, dtype):
-        return numpy.zeros((dimx, dimy), dtype=dtype)
+        return np_zeros((dimx, dimy), dtype=dtype)

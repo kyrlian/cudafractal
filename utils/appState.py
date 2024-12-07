@@ -1,6 +1,11 @@
 import math
-from numpy import int32, float64, complex128
 from dataclasses import dataclass
+from utils.types import (
+    type_math_complex ,
+    type_math_float ,
+    type_math_int,
+    type_enum_int ,
+)
 from fractal.colors import K_Mode, Palette_Mode
 from fractal.fractal import Fractal_Mode
 
@@ -10,18 +15,18 @@ class AppState:
     def __init__(self):
 
         # fractal variables
-        self.xcenter = float64(-0.5)
-        self.ycenter = float64(0)
-        self.yheight = float64(3)
-        self.max_iterations = int32(1000)
-        self.power = int32(2)
-        self.escape_radius = int32(4)
-        self.epsilon = float64(0.001)
-        self.fractal_mode = int32(Fractal_Mode.MANDELBROT)
-        self.palette_mode = int32(Palette_Mode.HUE)
-        self.k_mode = int32(K_Mode.ITER_WAVES)
-        self.color_waves = int32(2)
-        self.juliaxy = complex128(0 + 0j)
+        self.xcenter = type_math_float(-0.5)
+        self.ycenter = type_math_float(0)
+        self.yheight = type_math_float(3)
+        self.max_iterations = type_math_int(1000)
+        self.power = type_math_int(2)
+        self.escape_radius = type_math_int(4)
+        self.epsilon = type_math_float(0.001)
+        self.fractal_mode = type_enum_int(Fractal_Mode.MANDELBROT)
+        self.palette_mode = type_enum_int(Palette_Mode.HUE)
+        self.k_mode = type_enum_int(K_Mode.ITER_WAVES)
+        self.color_waves = type_math_int(2)
+        self.juliaxy = type_math_complex(0 + 0j)
         # UI variables
         self.show_info = True
 
@@ -105,7 +110,7 @@ class AppState:
             * (self.ymax - self.ymin)
             / self.DISPLAY_HEIGTH
         )
-        self.juliaxy = complex128(juliax + juliay * 1j)
+        self.juliaxy = type_math_complex(juliax + juliay * 1j)
         print(f"Fractal mode: {Fractal_Mode(self.fractal_mode).name}")
 
     def recalc_size(self):
@@ -160,18 +165,18 @@ class AppState:
             return default
 
     def set_from_info_table(self, info_table):
-        self.fractal_mode = int32(self.get_info_table_value(info_table,"fractal_mode",0))
-        self.xmin = float64(self.get_info_table_value(info_table,"xmin",-2.5))
-        self.xmax = float64(self.get_info_table_value(info_table,"xmax",1.5))
-        self.ymin = float64(self.get_info_table_value(info_table,"ymin",-1.5))
-        self.ymax = float64(self.get_info_table_value(info_table,"ymax",1.5))
-        self.k_mode = int32(self.get_info_table_value(info_table,"k_mode",0))
-        self.palette_mode = int32(self.get_info_table_value(info_table,"palette_mode",0))
-        self.color_waves = int32(self.get_info_table_value(info_table,"color_waves",2))
-        self.max_iterations = int32(self.get_info_table_value(info_table,"max_iterations",1000))
-        self.power = int32(self.get_info_table_value(info_table,"power",2))
-        self.escape_radius = int32(self.get_info_table_value(info_table,"escape_radius",4))
-        self.epsilon = float64(self.get_info_table_value(info_table,"epsilon",0.001))
-        self.xcenter = float64(self.xmin + (self.xmax - self.xmin)/2)
-        self.ycenter = float64(self.ymin + (self.ymax - self.ymin)/2)
-        self.yheight = float64(self.ymax - self.ymin)
+        self.fractal_mode = type_enum_int(self.get_info_table_value(info_table,"fractal_mode",0))
+        self.xmin = type_math_float(self.get_info_table_value(info_table,"xmin",-2.5))
+        self.xmax = type_math_float(self.get_info_table_value(info_table,"xmax",1.5))
+        self.ymin = type_math_float(self.get_info_table_value(info_table,"ymin",-1.5))
+        self.ymax = type_math_float(self.get_info_table_value(info_table,"ymax",1.5))
+        self.k_mode = type_enum_int(self.get_info_table_value(info_table,"k_mode",0))
+        self.palette_mode = type_enum_int(self.get_info_table_value(info_table,"palette_mode",0))
+        self.color_waves = type_math_int(self.get_info_table_value(info_table,"color_waves",2))
+        self.max_iterations = type_math_int(self.get_info_table_value(info_table,"max_iterations",1000))
+        self.power = type_math_int(self.get_info_table_value(info_table,"power",2))
+        self.escape_radius = type_math_int(self.get_info_table_value(info_table,"escape_radius",4))
+        self.epsilon = type_math_float(self.get_info_table_value(info_table,"epsilon",0.001))
+        self.xcenter = type_math_float(self.xmin + (self.xmax - self.xmin)/2)
+        self.ycenter = type_math_float(self.ymin + (self.ymax - self.ymin)/2)
+        self.yheight = type_math_float(self.ymax - self.ymin)

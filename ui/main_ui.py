@@ -3,7 +3,7 @@ import cProfile
 import pygame
 import pygame.freetype as ft
 import argparse
-from ui.appState import AppState
+from utils.appState import AppState
 from fractal.fractal import compute_fractal, Fractal_Mode
 from fractal.colors import K_Mode, Palette_Mode
 from PIL import Image

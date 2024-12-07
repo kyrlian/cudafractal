@@ -1,17 +1,17 @@
 import timeit
 import numpy
 from math import ceil
-from numpy import int32, float64, complex128
-from fractal.colors import compute_pixel_color, compute_pixel_k
-from fractal.utils_cuda import (
+from enum import IntEnum
+from typing import Tuple
+from utils.types import type_math_int, type_math_float, type_math_complex, type_enum_int
+from utils.cuda import (
     cuda_jit,
     cuda_available,
     cuda_grid,
     compute_threadsperblock,
     init_array,
 )
-from enum import IntEnum
-from typing import Tuple
+from fractal.colors import compute_pixel_color, compute_pixel_k
 
 class Fractal_Mode(IntEnum):
     MANDELBROT = 0
@@ -23,27 +23,27 @@ class Fractal_Mode(IntEnum):
     device=True,
 )
 def fractal_xy(
-    x: int32,
-    y: int32,
-    topleft: complex128,
-    xstep: float64,
-    ystep: float64,
-    fractalmode: int32,
-    max_iterations: int32,
-    power: int32,
-    escape_radius: int32,
-    epsilon: float64,
-    juliaxy: complex128,
-    k_mode: int32,
-    palette_mode: int32,
-    color_waves: int32,
-) ->  Tuple[int32, float64,float64,int32]:
-    z: complex128 = complex128(topleft + float64(x) * xstep - 1j * y * ystep)
-    c: complex128 = z if fractalmode == Fractal_Mode.MANDELBROT else juliaxy
-    nb_iter: int32 = int32(0)
-    z2: float64 = float64(0)
-    der: complex128 = complex128(1 + 0j)
-    der2: float64 = float64(1)
+    x: type_math_int,
+    y: type_math_int,
+    topleft: type_math_complex,
+    xstep: type_math_float,
+    ystep: type_math_float,
+    fractalmode: type_enum_int,
+    max_iterations: type_math_int,
+    power: type_math_int,
+    escape_radius: type_math_int,
+    epsilon: type_math_float,
+    juliaxy: type_math_complex,
+    k_mode: type_enum_int,
+    palette_mode: type_enum_int,
+    color_waves: type_math_int,
+) ->  Tuple[type_math_int, type_math_float,type_math_float,type_math_int]:
+    z: type_math_complex = type_math_complex(topleft + type_math_float(x) * xstep - 1j * y * ystep)
+    c: type_math_complex = z if fractalmode == Fractal_Mode.MANDELBROT else juliaxy
+    nb_iter: type_math_int = type_math_int(0)
+    z2: type_math_float = type_math_float(0)
+    der: type_math_complex = type_math_complex(1 + 0j)
+    der2: type_math_float = type_math_float(1)
     while nb_iter < max_iterations and z2 < escape_radius and der2 > epsilon:
         der = der * power * z
         z = z**power + c
@@ -69,18 +69,18 @@ def fractal_kernel(
     device_array_z2,
     device_array_k,
     device_array_rgb,
-    topleft: complex128,
-    xstep: float64,
-    ystep: float64,
-    fractalmode: int32,
-    max_iterations: int32,
-    power: int32,
-    escape_radius: int32,
-    epsilon: float64,
-    juliaxy: complex128,
-    k_mode: int32,
-    palette_mode: int32,
-    color_waves: int32,
+    topleft: type_math_complex,
+    xstep: type_math_float,
+    ystep: type_math_float,
+    fractalmode: type_enum_int,
+    max_iterations: type_math_int,
+    power: type_math_int,
+    escape_radius: type_math_int,
+    epsilon: type_math_float,
+    juliaxy: type_math_complex,
+    k_mode: type_enum_int,
+    palette_mode: type_enum_int,
+    color_waves: type_math_int,
 ) -> None:
     x, y = cuda_grid(2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
@@ -108,29 +108,29 @@ def fractal_kernel(
 
 def compute_fractal(
     WINDOW_SIZE,
-    xmax: float64,
-    xmin: float64,
-    ymin: float64,
-    ymax: float64,
-    fractalmode: int32,
-    max_iterations: int32,
-    power: int32,
-    escape_radius: int32,
-    epsilon: float64,
-    juliaxy: complex128,
-    k_mode: int32,
-    palette_mode: int32,
-    color_waves: int32,
+    xmax: type_math_float,
+    xmin: type_math_float,
+    ymin: type_math_float,
+    ymax: type_math_float,
+    fractalmode: type_enum_int,
+    max_iterations: type_math_int,
+    power: type_math_int,
+    escape_radius: type_math_int,
+    epsilon: type_math_float,
+    juliaxy: type_math_complex,
+    k_mode: type_enum_int,
+    palette_mode: type_enum_int,
+    color_waves: type_math_int,
 ):
     timerstart = timeit.default_timer()
     (screenw, screenh) = WINDOW_SIZE
     xstep = abs(xmax - xmin) / screenw
     ystep = abs(ymax - ymin) / screenh
-    topleft = complex128(xmin + 1j * ymax)
-    device_array_niter = init_array(screenw, screenh, numpy.int32)
-    device_array_z2 = init_array(screenw, screenh, numpy.float64)
-    device_array_k = init_array(screenw, screenh, numpy.float64)
-    device_array_rgb = init_array(screenw, screenh, numpy.int32)
+    topleft = type_math_complex(xmin + 1j * ymax)
+    device_array_niter = init_array(screenw, screenh, type_math_int)
+    device_array_z2 = init_array(screenw, screenh, type_math_float)
+    device_array_k = init_array(screenw, screenh, type_math_float)
+    device_array_rgb = init_array(screenw, screenh, type_math_int)
     if cuda_available():
         threadsperblock = compute_threadsperblock()
         blockspergrid = (
@@ -161,7 +161,7 @@ def compute_fractal(
         output_array_k = device_array_k.copy_to_host()
         output_array_rgb = device_array_rgb.copy_to_host()
     else:  # No cuda
-        vectorized_fractal_xy = numpy.vectorize(fractal_xy, otypes=[int32, float64, float64, int32])# fractal_xy returns nb_iter, z2, k, packedrgb 
+        vectorized_fractal_xy = numpy.vectorize(fractal_xy, otypes=[type_math_int, type_math_float, type_math_float, type_math_int])# fractal_xy returns nb_iter, z2, k, packedrgb 
         vector_x = range(device_array_niter.shape[0])
         vector_y = range(device_array_niter.shape[1])
         result_arrays = vectorized_fractal_xy(vector_x,vector_y,
