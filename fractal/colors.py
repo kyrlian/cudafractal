@@ -21,20 +21,19 @@ class Palette_Mode(IntEnum):
     CUSTOM = 2
 
 
-@cuda_jit("int32(int32[:,:], int32, int32, int32, int32, int32)", device=True)
-def set_color_rgb(device_array_rgb, x:int32, y:int32, r:int32, g:int32, b:int32) -> int32:
+@cuda_jit("int32(int32, int32, int32)", device=True)
+def rgb_to_packed(r:int32, g:int32, b:int32) -> int32:
     # r, g, b should be [0:255]
     # Cant assert in device function
     # assert r >= 0 and r <= 255, f"r should be in [0:255], got {r}"
     # assert g >=  0 and g  <= 255, f"g should be in [0:255], got {g}"
     # assert b >=  0 and b  <= 255, f"b should be in [0:255], got {b}"
     packed = (r * 256 + g) * 256 + b
-    device_array_rgb[x, y] = packed
     return packed
 
 
-@cuda_jit("int32(int32[:,:], int32, int32, float64, float64, float64)", device=True)
-def set_color_hsv(device_array_rgb, x:int32, y:int32, h: float64, s: float64, v: float64) -> int32:
+@cuda_jit("int32(float64, float64, float64)", device=True)
+def hsv_to_rgb(h: float64, s: float64, v: float64) -> int32:
     # h,s,v should be [0:1]
     r, g, b = 0, 0, 0
     if s > 0:
@@ -61,13 +60,13 @@ def set_color_hsv(device_array_rgb, x:int32, y:int32, h: float64, s: float64, v:
             r, g, b = v, w, q
     else:
         r, g, b = v, v, v
-    return set_color_rgb(
-        device_array_rgb, x, y, int(r * 255), int(g * 255), int(b * 255)
+    return rgb_to_packed(
+        int(r * 255), int(g * 255), int(b * 255)
     )
 
 
-@cuda_jit("int32(int32[:,:],  int32, int32, float64)", device=True)
-def set_color_custom(device_array_rgb, x: int32, y: int32, k: float64) -> int32:
+@cuda_jit("int32(float64)", device=True)
+def compute_color_custom(k: float64) -> int32:
     colors = ((0.0, 0, 0, 0), (0.5, 255, 0, 0), (1.0, 255, 255, 255))
     for i in range(len(colors) - 1):
         color_a_k, color_a_red, color_a_green, color_a_blue = colors[i]
@@ -78,37 +77,33 @@ def set_color_custom(device_array_rgb, x: int32, y: int32, k: float64) -> int32:
             r = int(color_a_red * ratio_a + color_b_red * ratio_b)
             g = int(color_a_green * ratio_a + color_b_green * ratio_b)
             b = int(color_a_blue * ratio_a + color_b_blue * ratio_b)
-            return set_color_rgb(device_array_rgb, x, y, r, g, b)
+            return rgb_to_packed(r, g, b)
     return int32(0)
 
 
-@cuda_jit("int32(int32[:,:], int32, int32, float64, int32)", device=True)
-def set_pixel_color(device_array_rgb, x: int32, y: int32, k: float64, palette_mode: int32) -> int32:
+@cuda_jit("int32(float64, int32)", device=True)
+def compute_pixel_color(k: float64, palette_mode: int32) -> int32:
     # calculate color from k
-    # k = device_array_k[x, y]
     match palette_mode:
         case Palette_Mode.HUE:
             if k == float(0.0):
-                return set_color_rgb(device_array_rgb, x, y, 0, 0, 0)
+                return rgb_to_packed(0, 0, 0)
             else:
-                return set_color_hsv(device_array_rgb, x, y, k, 1, 1)
+                return hsv_to_rgb(k, 1, 1)
         case Palette_Mode.GRAYSCALE:
             kk = int(k * 255)
-            return set_color_rgb(device_array_rgb, x, y, kk, kk, kk)
+            return rgb_to_packed(kk, kk, kk)
         case Palette_Mode.CUSTOM:  # custom palette_mode k to rgb
-            return set_color_custom(device_array_rgb, x, y, k)
+            return compute_color_custom(k)
         case _:
-            return set_color_rgb(device_array_rgb, x, y, 255, 0, 0)
+            return rgb_to_packed(255, 0, 0)
 
 
 @cuda_jit(
-    "int32(float64[:,:], int32, int32, int32, int32, float64, int32, float64, int32, int32)",
+    "float64(int32, int32, float64, int32, float64, int32, int32)",
     device=True,
 )
-def set_pixel_k(
-    device_array_k,
-    x: int32,
-    y: int32,
+def compute_pixel_k(
     nb_iter: int32,
     max_iterations: int32,
     z2: float64,
@@ -116,7 +111,7 @@ def set_pixel_k(
     der2: float64,
     k_mode: int32,
     color_waves: int32,
-):
+) -> float64:
     # calculate k[0-1] based on k mode
     k = float64(0.0)
     if z2 > escape_radius:
@@ -138,7 +133,6 @@ def set_pixel_k(
                 # k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
                 # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
                 k = 1 / z2
-    device_array_k[x, y] = k
     return k
 
 

@@ -2,7 +2,7 @@ import timeit
 import numpy
 from math import ceil
 from numpy import int32, float64, complex128
-from fractal.colors import set_pixel_color, set_pixel_k
+from fractal.colors import compute_pixel_color, compute_pixel_k
 from fractal.utils_cuda import (
     cuda_jit,
     cuda_available,
@@ -19,16 +19,12 @@ class Fractal_Mode(IntEnum):
 
 
 @cuda_jit(
-    "(int32, int32, int32[:,:], float64[:,:], float64[:,:], int32[:,:], complex128, float64, float64, int32, int32, int32, int32, float64, complex128, int32, int32, int32)",
+    "(int32, int32, complex128, float64, float64, int32, int32, int32, int32, float64, complex128, int32, int32, int32)",
     device=True,
 )
 def fractal_xy(
     x: int32,
     y: int32,
-    device_array_niter,
-    device_array_z2,
-    device_array_k,
-    device_array_rgb,
     topleft: complex128,
     xstep: float64,
     ystep: float64,
@@ -62,12 +58,7 @@ def fractal_xy(
         nb_iter += 1
         z2 = z.real**2 + z.imag**2
         der2 = der.real**2 + der.imag**2
-    device_array_niter[x, y] = nb_iter
-    device_array_z2[x, y] = z2
-    set_pixel_k(
-        device_array_k,
-        x,
-        y,
+    k = compute_pixel_k(
         nb_iter,
         max_iterations,
         z2,
@@ -76,8 +67,7 @@ def fractal_xy(
         k_mode,
         color_waves,
     )
-    k = device_array_k[x, y]
-    packedrgb = set_pixel_color(device_array_rgb, x, y, k, palette_mode)
+    packedrgb = compute_pixel_color(k, palette_mode)
     return nb_iter, z2, k, packedrgb
 
 
@@ -102,13 +92,9 @@ def fractal_kernel(
 ) -> None:
     x, y = cuda_grid(2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
-        fractal_xy(
+        nb_iter, z2, k, packedrgb = fractal_xy(
             x,
             y,
-            device_array_niter,
-            device_array_z2,
-            device_array_k,
-            device_array_rgb,
             topleft,
             xstep,
             ystep,
@@ -122,6 +108,10 @@ def fractal_kernel(
             palette_mode,
             color_waves,
         )
+        device_array_niter[x, y] = nb_iter
+        device_array_z2[x, y] = z2
+        device_array_k[x, y] = k
+        device_array_rgb[x, y] = packedrgb
 
 
 def compute_fractal(
@@ -188,10 +178,6 @@ def compute_fractal(
         #         k, packedrgb = fractal_xy(
         #             x,
         #             y,
-                    device_array_niter,
-                    device_array_z2,
-                    device_array_k,
-                    device_array_rgb,
                     topleft,
                     xstep,
                     ystep,
