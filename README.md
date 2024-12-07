@@ -11,7 +11,6 @@ uv tool install git+https://github.com/kyrlian/fractal-python-cuda.git
 ```
 
 Run with 
-
 ```sh
 fractal
 ```
@@ -22,6 +21,7 @@ fractal
 git clone https://github.com/kyrlian/fractal-python-cuda.git
 cd fractal-python-cuda
 ```
+
 Run with 
 ```sh
 uv run --extra cuda ui/main_ui.py 
