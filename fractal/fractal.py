@@ -3,7 +3,7 @@ import numpy
 from math import ceil
 from enum import IntEnum
 from typing import Tuple
-from utils.types import type_math_int, type_math_float, type_math_complex, type_enum_int
+from utils.types import type_math_int, type_math_float, type_math_complex, type_enum_int, type_color_int
 from utils.cuda import (
     cuda_jit,
     cuda_available,
@@ -12,6 +12,7 @@ from utils.cuda import (
     init_array,
 )
 from fractal.colors import compute_pixel_color, compute_pixel_k
+
 
 class Fractal_Mode(IntEnum):
     MANDELBROT = 0
@@ -37,8 +38,10 @@ def fractal_xy(
     k_mode: type_enum_int,
     palette_mode: type_enum_int,
     color_waves: type_math_int,
-) ->  Tuple[type_math_int, type_math_float,type_math_float,type_math_int]:
-    z: type_math_complex = type_math_complex(topleft + type_math_float(x) * xstep - 1j * y * ystep)
+) -> Tuple[type_math_int, type_math_float, type_math_float, type_color_int]:
+    z: type_math_complex = type_math_complex(
+        topleft + type_math_float(x) * xstep - 1j * y * ystep
+    )
     c: type_math_complex = z if fractalmode == Fractal_Mode.MANDELBROT else juliaxy
     nb_iter: type_math_int = type_math_int(0)
     z2: type_math_float = type_math_float(0)
@@ -63,7 +66,9 @@ def fractal_xy(
     return nb_iter, z2, k, packedrgb
 
 
-@cuda_jit("(int32[:,:], float64[:,:], float64[:,:], int32[:,:], complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, int32)")
+@cuda_jit(
+    "(int32[:,:], float64[:,:], float64[:,:], int32[:,:], complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, int32)"
+)
 def fractal_kernel(
     device_array_niter,
     device_array_z2,
@@ -160,33 +165,69 @@ def compute_fractal(
         output_array_k = device_array_k.copy_to_host()
         output_array_rgb = device_array_rgb.copy_to_host()
     else:  # No cuda
-        vectorized_fractal_xy = numpy.vectorize(fractal_xy, otypes=[type_math_int, type_math_float, type_math_float, type_math_int])# fractal_xy returns nb_iter, z2, k, packedrgb 
-        vector_x = range(device_array_niter.shape[0])
-        vector_y = range(device_array_niter.shape[1])
-        result_arrays = vectorized_fractal_xy(vector_x,vector_y,
-        # for x in range(device_array_niter.shape[0]):
-        #     for y in range(device_array_niter.shape[1]):
-        #         k, packedrgb = fractal_xy(
-        #             x,
-        #             y,
-                    topleft,
-                    xstep,
-                    ystep,
-                    fractalmode,
-                    max_iterations,
-                    power,
-                    escape_radius,
-                    epsilon,
-                    juliaxy,
-                    k_mode,
-                    palette_mode,
-                    color_waves,
-                )
-        output_array_niter, output_array_z2, output_array_k,  output_array_rgb = result_arrays
-        # output_array_niter = device_array_niter
-        # output_array_z2 = device_array_z2
-        # output_array_k = device_array_k
-        # output_array_rgb = device_array_rgb
-
+        run_vectorized = True
+        if run_vectorized:
+            # vectorized version:
+            vectorized_fractal_xy = numpy.vectorize(
+                fractal_xy,
+                otypes=[type_math_int, type_math_float, type_math_float, type_color_int],
+            )  # fractal_xy returns nb_iter, z2, k, packedrgb
+            # vector_x and vector_y need to be same size, and represent all matrix cells:
+            matrix_x=[]
+            matrix_y=[]
+            for x in range(device_array_niter.shape[0]):
+                vector_x=[]
+                vector_y=[]
+                for y in range(device_array_niter.shape[1]):
+                    vector_x.append(x)
+                    vector_y.append(y)
+                matrix_x.append(vector_x)
+                matrix_y.append(vector_y)
+            result_arrays = vectorized_fractal_xy(
+                matrix_x,
+                matrix_y,
+                topleft,
+                xstep,
+                ystep,
+                fractalmode,
+                max_iterations,
+                power,
+                escape_radius,
+                epsilon,
+                juliaxy,
+                k_mode,
+                palette_mode,
+                color_waves,
+            )
+            output_array_niter, output_array_z2, output_array_k, output_array_rgb = (
+                result_arrays
+            )
+        else:
+            # NON vectorized version:
+            output_array_niter = init_array(screenw, screenh, type_math_int)
+            output_array_z2 = init_array(screenw, screenh, type_math_float)
+            output_array_k = init_array(screenw, screenh, type_math_float)
+            output_array_rgb = init_array(screenw, screenh, type_math_int)
+            for x in range(device_array_niter.shape[0]):
+                for y in range(device_array_niter.shape[1]):
+                    niter, z2, k, packedrgb = fractal_xy(
+                        x,
+                        y,            topleft,
+                        xstep,
+                        ystep,
+                        fractalmode,
+                        max_iterations,
+                        power,
+                        escape_radius,
+                        epsilon,
+                        juliaxy,
+                        k_mode,
+                        palette_mode,
+                        color_waves,
+                    )
+                    output_array_niter[x,y]=niter
+                    output_array_z2[x,y]=z2
+                    output_array_k[x,y]=k
+                    output_array_rgb[x,y]=packedrgb
     print(f"Frame calculated in {(timeit.default_timer() - timerstart)}s")
     return output_array_niter, output_array_z2, output_array_k, output_array_rgb
