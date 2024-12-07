@@ -132,12 +132,11 @@ def compute_fractal(
     device_array_k = init_array(screenw, screenh, type_math_float)
     device_array_rgb = init_array(screenw, screenh, type_math_int)
     if cuda_available():
-        threadsperblock = compute_threadsperblock()
+        threadsperblock = compute_threadsperblock(screenw, screenh)
         blockspergrid = (
             ceil(screenw / threadsperblock[0]),
             ceil(screenh / threadsperblock[1]),
         )
-        print("fractal_kernel types:")
         fractal_kernel[blockspergrid, threadsperblock](
             device_array_niter,
             device_array_z2,
