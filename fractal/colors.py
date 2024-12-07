@@ -35,7 +35,7 @@ def rgb_to_packed(r: type_color_int_small, g: type_color_int_small, b: type_colo
     # assert r >= 0 and r <= 255, f"r should be in [0:255], got {r}"
     # assert g >=  0 and g  <= 255, f"g should be in [0:255], got {g}"
     # assert b >=  0 and b  <= 255, f"b should be in [0:255], got {b}"
-    packed = (r * 256 + g) * 256 + b
+    packed = ((type_color_int(r) * 256) + g) * 256 + b
     return packed
 
 
