@@ -30,7 +30,7 @@ def fractal_xy(
     ystep: float64,
     fractalmode: int32,
     max_iterations: int32,
-    p: int32,
+    power: int32,
     escape_radius: int32,
     epsilon: float64,
     juliaxy: complex128,
@@ -38,23 +38,15 @@ def fractal_xy(
     palette_mode: int32,
     color_waves: int32,
 ) ->  Tuple[int32, float64,float64,int32]:
-    c: complex128 = (
-        complex128(topleft + float64(x) * xstep - 1j * y * ystep)
-        if fractalmode == Fractal_Mode.MANDELBROT
-        else juliaxy
-    )
-    z: complex128 = (
-        c
-        if fractalmode == Fractal_Mode.MANDELBROT
-        else complex128(topleft + float64(x) * xstep - 1j * y * ystep)
-    )
+    z: complex128 = complex128(topleft + float64(x) * xstep - 1j * y * ystep)
+    c: complex128 = z if fractalmode == Fractal_Mode.MANDELBROT else juliaxy
     nb_iter: int32 = int32(0)
     z2: float64 = float64(0)
     der: complex128 = complex128(1 + 0j)
     der2: float64 = float64(1)
     while nb_iter < max_iterations and z2 < escape_radius and der2 > epsilon:
-        der = der * p * z
-        z = z**p + c
+        der = der * power * z
+        z = z**power + c
         nb_iter += 1
         z2 = z.real**2 + z.imag**2
         der2 = der.real**2 + der.imag**2
@@ -82,7 +74,7 @@ def fractal_kernel(
     ystep: float64,
     fractalmode: int32,
     max_iterations: int32,
-    p: int32,
+    power: int32,
     escape_radius: int32,
     epsilon: float64,
     juliaxy: complex128,
@@ -100,7 +92,7 @@ def fractal_kernel(
             ystep,
             fractalmode,
             max_iterations,
-            p,
+            power,
             escape_radius,
             epsilon,
             juliaxy,
