@@ -19,7 +19,7 @@ class Fractal_Mode(IntEnum):
 
 
 @cuda_jit(
-    "(int32, int32, complex128, float64, float64, int32, int32, int32, int32, float64, complex128, int32, int32, int32)",
+    "(int32, int32, complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, int32)",
     device=True,
 )
 def fractal_xy(
@@ -63,7 +63,7 @@ def fractal_xy(
     return nb_iter, z2, k, packedrgb
 
 
-@cuda_jit("(int32[:,:], float64[:,:], float64[:,:], int32[:,:], complex128, float64, float64, int32, int32, int32, int32, float64, complex128, int32, int32, int32)")
+@cuda_jit("(int32[:,:], float64[:,:], float64[:,:], int32[:,:], complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, int32)")
 def fractal_kernel(
     device_array_niter,
     device_array_z2,

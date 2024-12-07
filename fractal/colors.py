@@ -28,7 +28,7 @@ class Palette_Mode(IntEnum):
     CUSTOM = 2
 
 
-@cuda_jit("int32(int32, int32, int32)", device=True)
+@cuda_jit("int32(uint8, uint8, uint8)", device=True)
 def rgb_to_packed(r: type_color_int_small, g: type_color_int_small, b: type_color_int_small) -> type_color_int:
     # r, g, b should be [0:255]
     # Cant assert in device function
@@ -86,7 +86,7 @@ def compute_color_custom(k: type_math_float) -> type_color_int:
     return type_color_int(0)
 
 
-@cuda_jit("int32(float64, int32)", device=True)
+@cuda_jit("int32(float64, uint8)", device=True)
 def compute_pixel_color(k: type_math_float, palette_mode: type_enum_int) -> type_color_int:
     # calculate color from k
     match palette_mode:
@@ -105,7 +105,7 @@ def compute_pixel_color(k: type_math_float, palette_mode: type_enum_int) -> type
 
 
 @cuda_jit(
-    "float64(int32, int32, float64, int32, float64, int32, int32)",
+    "float64(int32, int32, float64, int32, float64, uint8, int32)",
     device=True,
 )
 def compute_pixel_k(
