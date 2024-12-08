@@ -3,12 +3,12 @@ from enum import IntEnum
 from typing import Tuple
 from utils.cuda import cuda_jit, cuda_grid
 from utils.types import (
-    type_math_float ,
+    type_math_float,
     type_math_int,
-    type_enum_int ,
-    type_color_float ,
-    type_color_int ,
-    type_color_int_small ,
+    type_enum_int,
+    type_color_float,
+    type_color_int,
+    type_color_int_small,
 )
 
 
@@ -28,7 +28,9 @@ class Palette_Mode(IntEnum):
 
 
 @cuda_jit("uint32(uint8, uint8, uint8)", device=True)
-def rgb_to_packed(r: type_color_int_small, g: type_color_int_small, b: type_color_int_small) -> type_color_int:
+def rgb_to_packed(
+    r: type_color_int_small, g: type_color_int_small, b: type_color_int_small
+) -> type_color_int:
     # r, g, b should be [0:255]
     # Cant assert in device function
     # assert r >= 0 and r <= 255, f"r should be in [0:255], got {r}"
@@ -39,7 +41,9 @@ def rgb_to_packed(r: type_color_int_small, g: type_color_int_small, b: type_colo
 
 
 @cuda_jit("uint32(float64, float64, float64)", device=True)
-def hsv_to_rgb(h: type_color_float, s: type_color_float, v: type_color_float) -> type_color_int:
+def hsv_to_rgb(
+    h: type_color_float, s: type_color_float, v: type_color_float
+) -> type_color_int:
     # h,s,v should be [0:1]
     r = g = b = type_color_float(0)
     if s > 0:
@@ -66,7 +70,11 @@ def hsv_to_rgb(h: type_color_float, s: type_color_float, v: type_color_float) ->
             r, g, b = v, w, q
     else:
         r, g, b = v, v, v
-    return rgb_to_packed(type_color_int_small(r * 255), type_color_int_small(g * 255), type_color_int_small(b * 255))
+    return rgb_to_packed(
+        type_color_int_small(r * 255),
+        type_color_int_small(g * 255),
+        type_color_int_small(b * 255),
+    )
 
 
 @cuda_jit("uint32(float64)", device=True)
@@ -86,7 +94,9 @@ def compute_color_custom(k: type_math_float) -> type_color_int:
 
 
 @cuda_jit("uint32(float64, uint8)", device=True)
-def compute_pixel_color(k: type_math_float, palette_mode: type_enum_int) -> type_color_int:
+def compute_pixel_color(
+    k: type_math_float, palette_mode: type_enum_int
+) -> type_color_int:
     # calculate color from k
     match palette_mode:
         case Palette_Mode.HUE:
@@ -137,6 +147,7 @@ def compute_pixel_k(
                 # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
                 k = 1 / z2
     return k
+
 
 @cuda_jit(
     "(int32, int32, int32, int32, float64, int32, uint8, uint8, int32)",
@@ -196,6 +207,39 @@ def color_kernel(
         )
         device_array_k[x, y] = k
         device_array_rgb[x, y] = packedrgb
+
+
+def color_cpu(
+    output_array_niter,
+    output_array_z2,
+    output_array_k,
+    output_array_rgb,
+    max_iterations: type_math_int,
+    escape_radius: type_math_int,
+    k_mode: type_enum_int,
+    palette_mode: type_enum_int,
+    color_waves: type_math_int,
+):
+    # NON vectorized version:
+    for x in range(output_array_niter.shape[0]):
+        for y in range(output_array_niter.shape[1]):
+            nb_iter = output_array_niter[x, y]
+            z2 = output_array_z2[x, y]
+            k, packedrgb = color_xy(
+                x,
+                y,
+                nb_iter,
+                max_iterations,
+                z2,
+                escape_radius,
+                k_mode,
+                palette_mode,
+                color_waves,
+            )
+            output_array_k[x, y] = k
+            output_array_rgb[x, y] = packedrgb
+    return output_array_niter, output_array_z2, output_array_k, output_array_rgb
+
 
 # def build_custom_palette(color_list: List[Color], steps):
 #     if len(color_list) == 0:
