@@ -7,7 +7,7 @@ from utils.appState import AppState
 from fractal.fractal import init_arrays, compute_fractal
 from ui.info import print_info, print_help
 from ui.screenshot import screenshot, load_metada
-from fractal.palette import prepare_palettes, palletes_definitions
+from fractal.palette import prepare_palettes, palletes_definitions, get_computed_palette
 
 def pygamemain(src_image=None):
     def redraw(
@@ -21,7 +21,8 @@ def pygamemain(src_image=None):
         recalc_color=False,
     ):
         appstate.recalc_size()
-        # output_array_rgb = pygame.PixelArray(screen_surface)
+        # TODO get current custom pre-computed palette and pass it
+        custom_palette = get_computed_palette(computed_palettes, appstate.custom_palette_name)
         output_array_niter, output_array_z2, output_array_k, output_array_rgb = (
             compute_fractal(
                 output_array_niter,
@@ -152,6 +153,9 @@ def pygamemain(src_image=None):
                         recalc_color = True
                     case pygame.K_c:
                         appstate.change_color_palette_mode()
+                        recalc_color = True
+                    case pygame.K_v:
+                        appstate.change_color_palette_name()
                         recalc_color = True
                     case pygame.K_w:
                         if shift:

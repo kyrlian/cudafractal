@@ -8,7 +8,7 @@ from utils.types import (
 )
 from fractal.colors import K_Mode, Palette_Mode
 from fractal.fractal import Fractal_Mode
-
+from fractal.palette import palletes_definitions
 
 @dataclass
 class AppState:
@@ -23,10 +23,13 @@ class AppState:
         self.escape_radius = type_math_int(4)
         self.epsilon = type_math_float(0.001)
         self.fractal_mode = type_enum_int(Fractal_Mode.MANDELBROT)
+        self.juliaxy = type_math_complex(0 + 0j)
+
+        # color variables
         self.palette_mode = type_enum_int(Palette_Mode.HUE)
         self.k_mode = type_enum_int(K_Mode.ITER_WAVES)
         self.color_waves = type_math_int(2)
-        self.juliaxy = type_math_complex(0 + 0j)
+        self.custom_palette_name = list(palletes_definitions.keys())[0]  # TODO use first key from palletes_definitions
         # UI variables
         self.show_info = True
 
@@ -74,6 +77,11 @@ class AppState:
         print(
             f"Palette mode: {self.palette_mode}: {Palette_Mode(self.palette_mode).name}"
         )
+
+    def change_color_palette_name(self):
+        # TODO cycle names from palletes_definitions
+        # self.custom_palette_name
+        print(f"Custom palette: ({self.custom_palette_name})")
 
     def change_color_waves(self, plusminus):
         self.color_waves = self.color_waves + plusminus
@@ -129,11 +137,12 @@ class AppState:
 
     def get_info(self):
         return [
-            f"Fractal mode: {Fractal_Mode(self.fractal_mode).name}",
+            f"fractal mode: {Fractal_Mode(self.fractal_mode).name}",
             f"x: {self.xmin} - {self.xmax}",
             f"y: {self.ymin} - {self.ymax}",
             f"K mode: {K_Mode(self.k_mode).name}",
-            f"Palette mode: {Palette_Mode(self.palette_mode).name}",
+            f"palette mode: {Palette_Mode(self.palette_mode).name}",
+            f"palette name: {self.custom_palette_name}",#TODO only display if self.palette_mode = Palette_Mode.CUSTOM"
             f"color waves: {self.color_waves}",
             f"max iterations: {self.max_iterations}",
             f"power: {self.power}",
@@ -150,6 +159,7 @@ class AppState:
         info_table["ymax"] = self.ymax
         info_table["k_mode"] = self.k_mode
         info_table["palette_mode"] = self.palette_mode
+        # TODO add appstate.custom_palette_name 
         info_table["color_waves"] = self.color_waves
         info_table["max_iterations"] = self.max_iterations
         info_table["power"] = self.power
@@ -172,6 +182,7 @@ class AppState:
         self.ymax = type_math_float(self.get_info_table_value(info_table,"ymax",1.5))
         self.k_mode = type_enum_int(self.get_info_table_value(info_table,"k_mode",0))
         self.palette_mode = type_enum_int(self.get_info_table_value(info_table,"palette_mode",0))
+        # TODO add appstate.custom_palette_name 
         self.color_waves = type_math_int(self.get_info_table_value(info_table,"color_waves",2))
         self.max_iterations = type_math_int(self.get_info_table_value(info_table,"max_iterations",1000))
         self.power = type_math_int(self.get_info_table_value(info_table,"power",2))

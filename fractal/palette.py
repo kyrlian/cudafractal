@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from timeit import default_timer
 from utils.types import (
     type_math_float,
@@ -56,11 +56,14 @@ def prepare_palette(palette_colors, steps: type_math_int) -> List[type_color_int
 
 def prepare_palettes(
     palletes_defs: dict, steps: type_math_int
-) -> List[List[type_color_int]]:
+) -> Dict[str, List[type_color_int]]:
     print("Precomputing palettes")
     timerstart = default_timer()
-    computed_palettes = []
+    computed_palettes = {}
     for name, palette_def in palletes_defs.items():
-        computed_palettes.append(prepare_palette(palette_def, steps))
+        computed_palettes[name]=(prepare_palette(palette_def, steps))
     print(f"Palettes calculated in {(default_timer() - timerstart)}s")
     return computed_palettes
+
+def get_computed_palette(computed_palettes, name:str)->List[type_color_int]:
+    return computed_palettes[name]

@@ -60,20 +60,21 @@ def print_help(appstate):
     print("    shift+z, right click: zoom out")
     print("    up, down, left, right: pan")
     k_mode_name = K_Mode(appstate.k_mode).name
-    print(f"    k:  k mode (0, {appstate.k_mode}:{k_mode_name})")
+    print(f"    k: k mode (0, {appstate.k_mode}:{k_mode_name})")
     palette_mode_name = Palette_Mode(appstate.palette_mode).name
-    print(f"    c:  palette mode (0, {appstate.palette_mode}:{palette_mode_name})")
-    print(f"    w:  color waves (2, {appstate.color_waves})")
-    print(f"    i:  max iterations (1000, {appstate.max_iterations})")
-    print(f"    p:  power(2, {appstate.power})")
-    print(f"    r:  escape radius(4, {appstate.escape_radius})")
-    print(f"    e:  epsilon (0.001, {appstate.epsilon})")
-    print(f"    a:  epsilon=0 (0.001, {appstate.epsilon})")
+    print(f"    c: palette mode (0, {appstate.palette_mode}:{palette_mode_name})")
+    print(f"    v: custom palette ({appstate.custom_palette_name})")
+    print(f"    w: color waves (2, {appstate.color_waves})")
+    print(f"    i: max iterations (1000, {appstate.max_iterations})")
+    print(f"    p: power(2, {appstate.power})")
+    print(f"    r: escape radius(4, {appstate.escape_radius})")
+    print(f"    e: epsilon (0.001, {appstate.epsilon})")
+    print(f"    a: epsilon=0 (0.001, {appstate.epsilon})")
     fractal_mode_name = Fractal_Mode(appstate.fractal_mode).name
     print(
-        f"    j:  middle click: julia/mandelbrot (0, {appstate.fractal_mode}:{fractal_mode_name})"
+        f"    j: middle click: julia/mandelbrot (0, {appstate.fractal_mode}:{fractal_mode_name})"
     )
-    print("    d:  display info")
+    print("    d: display info")
     print("    backspace: reset")
     print("    q: quit")
     print(
