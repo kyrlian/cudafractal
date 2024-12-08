@@ -7,7 +7,12 @@ from utils.appState import AppState
 from fractal.fractal import init_arrays, compute_fractal
 from ui.info import print_info, print_help
 from ui.screenshot import screenshot, load_metada
-from fractal.palette import prepare_palettes, palettes_definitions, get_computed_palette, palette_shift
+from fractal.palette import (
+    prepare_palettes,
+    palettes_definitions,
+    get_computed_palette,
+    palette_shift,
+)
 from ui.keys_config import (
     key_shift,
     key_shift_r,
@@ -26,13 +31,17 @@ from ui.keys_config import (
     key_julia,
     key_k_mode,
     key_color_mode,
-    key_color_palette,key_palette_shift,
+    key_color_palette,
+    key_palette_shift,
     key_color_waves,
     key_reset,
     key_help,
     key_display_info,
+    key_ctrl,
+    key_ctrl_r,
 )
 from fractal.colors import Palette_Mode
+
 
 def pygamemain(src_image=None):
     def redraw(
@@ -51,9 +60,9 @@ def pygamemain(src_image=None):
             custom_palette = get_computed_palette(
                 computed_palettes, appstate.custom_palette_name
             )
-            shifted_palette = palette_shift(custom_palette,appstate.palette_shift)
+            shifted_palette = palette_shift(custom_palette, appstate.palette_shift)
         else:
-            shifted_palette=[]
+            shifted_palette = []
         # Compute fractal
         output_array_niter, output_array_z2, output_array_k, output_array_rgb = (
             compute_fractal(
@@ -126,6 +135,10 @@ def pygamemain(src_image=None):
                     pygame.key.get_pressed()[key_shift]
                     or pygame.key.get_pressed()[key_shift_r]
                 )
+                ctrl = (
+                    pygame.key.get_pressed()[key_ctrl]
+                    or pygame.key.get_pressed()[key_ctrl_r]
+                )
                 if event.key == key_quit:
                     running = False
                 elif event.key == key_zoom:
@@ -193,10 +206,12 @@ def pygamemain(src_image=None):
                     appstate.reset_palette_shift()
                     recalc_color = True
                 elif event.key == key_palette_shift:
+                    step = direction = 1
+                    if ctrl:
+                        step = 10
                     if shift:
-                        appstate.change_palette_shift(-1)
-                    else:
-                        appstate.change_palette_shift(1)
+                        direction = -1
+                    appstate.change_palette_shift(step * direction)
                     recalc_color = True
                 elif event.key == key_color_waves:
                     if shift:
