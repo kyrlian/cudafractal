@@ -2,7 +2,7 @@
 from timeit import default_timer
 from math import ceil
 from enum import IntEnum
-from typing import Tuple
+from typing import Tuple, List
 from numpy import vectorize as np_vectorize
 from utils.types import (
     type_math_int,
@@ -29,7 +29,7 @@ class Fractal_Mode(IntEnum):
 
 
 @cuda_jit(
-    "(int32, int32, complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, int32)",
+    "(int32, int32, complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, uint32[:], int32)",
     device=True,
 )
 def fractal_xy(
@@ -45,7 +45,7 @@ def fractal_xy(
     epsilon: type_math_float,
     juliaxy: type_math_complex,
     k_mode: type_enum_int,
-    palette_mode: type_enum_int,
+    palette_mode: type_enum_int,custom_palette:List[type_color_int],
     color_waves: type_math_int,
 ) -> Tuple[type_math_int, type_math_float, type_math_float, type_color_int]:
     z: type_math_complex = type_math_complex(
@@ -70,14 +70,14 @@ def fractal_xy(
         z2,
         escape_radius,
         k_mode,
-        palette_mode,
+        palette_mode,custom_palette,
         color_waves,
     )
     return nb_iter, z2, k, packedrgb
 
 
 @cuda_jit(
-    "(int32[:,:], float64[:,:], float64[:,:], int32[:,:], complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, int32)"
+    "(int32[:,:], float64[:,:], float64[:,:], int32[:,:], complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, uint32[:], int32)"
 )
 def fractal_kernel(
     device_array_niter,
@@ -94,7 +94,7 @@ def fractal_kernel(
     epsilon: type_math_float,
     juliaxy: type_math_complex,
     k_mode: type_enum_int,
-    palette_mode: type_enum_int,
+    palette_mode: type_enum_int,custom_palette:List[type_color_int],
     color_waves: type_math_int,
 ) -> None:
     x, y = cuda_grid(2)
@@ -112,7 +112,7 @@ def fractal_kernel(
             epsilon,
             juliaxy,
             k_mode,
-            palette_mode,
+            palette_mode,custom_palette,
             color_waves,
         )
         device_array_niter[x, y] = nb_iter
@@ -136,7 +136,7 @@ def fractal_cpu(
     epsilon: type_math_float,
     juliaxy: type_math_complex,
     k_mode: type_enum_int,
-    palette_mode: type_enum_int,
+    palette_mode: type_enum_int,custom_palette:List[type_color_int],
     color_waves: type_math_int,
 ):
     run_vectorized = True
@@ -175,7 +175,7 @@ def fractal_cpu(
             epsilon,
             juliaxy,
             k_mode,
-            palette_mode,
+            palette_mode,custom_palette,
             color_waves,
         )
         output_array_niter, output_array_z2, output_array_k, output_array_rgb = (
@@ -198,7 +198,7 @@ def fractal_cpu(
                     epsilon,
                     juliaxy,
                     k_mode,
-                    palette_mode,
+                    palette_mode,custom_palette,
                     color_waves,
                 )
                 output_array_niter[x, y] = niter
@@ -239,6 +239,7 @@ def compute_fractal(
     juliaxy: type_math_complex,
     k_mode: type_enum_int,
     palette_mode: type_enum_int,
+    custom_palette:List[type_color_int],
     color_waves: type_math_int,
     recalc_fractal: bool = True,
     recalc_color: bool = False,
@@ -254,6 +255,7 @@ def compute_fractal(
         device_array_z2 = cuda_copy_to_device(output_array_z2)
         device_array_k = cuda_copy_to_device(output_array_k)
         device_array_rgb = cuda_copy_to_device(output_array_rgb)
+        device_array_palette = cuda_copy_to_device(custom_palette)
         # Compute block and threads
         threadsperblock = compute_threadsperblock(screenw, screenh)
         blockspergrid = (
@@ -277,7 +279,7 @@ def compute_fractal(
                 epsilon,
                 juliaxy,
                 k_mode,
-                palette_mode,
+                palette_mode,device_array_palette,
                 color_waves,
             )
         elif recalc_color:
@@ -290,7 +292,7 @@ def compute_fractal(
                 max_iterations,
                 escape_radius,
                 k_mode,
-                palette_mode,
+                palette_mode,device_array_palette,
                 color_waves,
             )
         # copy arrays back to host
@@ -316,7 +318,7 @@ def compute_fractal(
                     epsilon,
                     juliaxy,
                     k_mode,
-                    palette_mode,
+                    palette_mode,custom_palette,
                     color_waves,
                 )
             )
@@ -331,7 +333,7 @@ def compute_fractal(
                     max_iterations,
                     escape_radius,
                     k_mode,
-                    palette_mode,
+                    palette_mode,custom_palette,
                     color_waves,
                 )
             )

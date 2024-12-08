@@ -9,7 +9,7 @@ from utils.types import (
 )
 
 
-palletes_definitions = {
+palettes_definitions = {
     "black_red_white": ((0.0, 0, 0, 0), (0.5, 255, 0, 0), (1.0, 255, 255, 255)),
     "black_blue_white": ((0.0, 0, 0, 0), (0.5, 0, 0, 255), (1.0, 255, 255, 255)),
 }

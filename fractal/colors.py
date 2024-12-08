@@ -97,9 +97,9 @@ def compute_color_custom(k: type_math_float) -> type_color_int:
     return type_color_int(0)
 
 
-@cuda_jit("uint32(float64, uint8)", device=True)
+@cuda_jit("uint32(float64, uint8, uint32[:])", device=True)
 def compute_pixel_color(
-    k: type_math_float, palette_mode: type_enum_int #TODO get custom_palette
+    k: type_math_float, palette_mode: type_enum_int, custom_palette:List[type_color_int],
 ) -> type_color_int:
     # calculate color from k
     match palette_mode:
@@ -112,8 +112,7 @@ def compute_pixel_color(
             kk = int(k * 255)
             return rgb_to_packed(kk, kk, kk)
         case Palette_Mode.CUSTOM:  # custom palette_mode k to rgb
-            # return get_color(custom_palette, k) #TODO test custom_palette
-            return compute_color_custom(k)
+            return get_color(custom_palette, k)
         case _:
             return rgb_to_packed(255, 0, 0)
 
@@ -155,7 +154,7 @@ def compute_pixel_k(
 
 
 @cuda_jit(
-    "(int32, int32, int32, int32, float64, int32, uint8, uint8, int32)",
+    "(int32, int32, int32, int32, float64, int32, uint8, uint8, uint32[:], int32)",
     device=True,
 )
 def color_xy(
@@ -167,6 +166,7 @@ def color_xy(
     escape_radius: type_math_int,
     k_mode: type_enum_int,
     palette_mode: type_enum_int,
+    custom_palette:List[type_color_int],
     color_waves: type_math_int,
 ) -> Tuple[type_math_float, type_color_int]:
     k = compute_pixel_k(
@@ -177,12 +177,12 @@ def color_xy(
         k_mode,
         color_waves,
     )
-    packedrgb = compute_pixel_color(k, palette_mode)
+    packedrgb = compute_pixel_color(k, palette_mode, custom_palette)
     return k, packedrgb
 
 
 @cuda_jit(
-    "(int32[:,:], float64[:,:], float64[:,:], int32[:,:], int32, int32, uint8, uint8, int32)"
+    "(int32[:,:], float64[:,:], float64[:,:], int32[:,:], int32, int32, uint8, uint8, uint32[:], int32)"
 )
 def color_kernel(
     device_array_niter,
@@ -192,7 +192,7 @@ def color_kernel(
     max_iterations: type_math_int,
     escape_radius: type_math_int,
     k_mode: type_enum_int,
-    palette_mode: type_enum_int,
+    palette_mode: type_enum_int,custom_palette:List[type_color_int],
     color_waves: type_math_int,
 ) -> None:
     x, y = cuda_grid(2)
@@ -207,7 +207,7 @@ def color_kernel(
             z2,
             escape_radius,
             k_mode,
-            palette_mode,
+            palette_mode,custom_palette,
             color_waves,
         )
         device_array_k[x, y] = k
@@ -222,7 +222,7 @@ def color_cpu(
     max_iterations: type_math_int,
     escape_radius: type_math_int,
     k_mode: type_enum_int,
-    palette_mode: type_enum_int,
+    palette_mode: type_enum_int,custom_palette:List[type_color_int],
     color_waves: type_math_int,
 ):
     # NON vectorized version:
@@ -238,7 +238,7 @@ def color_cpu(
                 z2,
                 escape_radius,
                 k_mode,
-                palette_mode,
+                palette_mode,custom_palette,
                 color_waves,
             )
             output_array_k[x, y] = k
