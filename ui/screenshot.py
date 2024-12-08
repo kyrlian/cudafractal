@@ -4,7 +4,7 @@ from PIL.PngImagePlugin import PngInfo
 
 def screenshot(screen_surface, appstate):
     filename = "screenshot.png"
-    # TODO - add timestamp
+    # TODO - add timestamp to screenshot filename
     pygame.image.save(screen_surface, filename)
     # add metadata
     metadata_info = appstate.get_info_table()
