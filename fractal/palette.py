@@ -12,7 +12,6 @@ palletes_definitions = {
 }
 
 
-@cuda_jit(device=True)
 def compute_color(colors, k) -> type_color_int:
     for i in range(len(colors) - 1):
         color_a_k, color_a_red, color_a_green, color_a_blue = colors[i]
