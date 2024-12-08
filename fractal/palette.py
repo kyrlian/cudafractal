@@ -2,15 +2,15 @@ from typing import List
 from fractal.colors import rgb_to_packed
 from utils.cuda import cuda_jit
 from utils.types import (
-    type_color_int ,
+    type_color_int,
 )
 
 
-palletes_definitions={
-    "black_red_white":((0.0, 0, 0, 0), (0.5, 255, 0, 0), (1.0, 255, 255, 255)),
-    "black_blue_white":((0.0, 0, 0, 0), (0.5, 0, 0, 255), (1.0, 255, 255, 255))
-
+palletes_definitions = {
+    "black_red_white": ((0.0, 0, 0, 0), (0.5, 255, 0, 0), (1.0, 255, 255, 255)),
+    "black_blue_white": ((0.0, 0, 0, 0), (0.5, 0, 0, 255), (1.0, 255, 255, 255)),
 }
+
 
 @cuda_jit(device=True)
 def compute_color(colors, k) -> type_color_int:
@@ -26,15 +26,19 @@ def compute_color(colors, k) -> type_color_int:
             return rgb_to_packed(r, g, b)
     return type_color_int(0)
 
-def prepare_palette(colors, steps)->List[type_color_int]:
-    palette=[]
+
+def prepare_palette(colors, steps) -> List[type_color_int]:
+    palette = []
     for i in range(steps):
         k = i / steps
         palette.append(compute_color(colors, k))
     return palette
 
-def prepare_palettes(palletes_definition:dict, steps:int)->List[List[type_color_int]]:
-    palettes=[]
+
+def prepare_palettes(
+    palletes_definition: dict, steps: int
+) -> List[List[type_color_int]]:
+    palettes = []
     for name, palette_def in palletes_definitions.items():
-        palettes.append(prepare_palette(palette_def,steps))
+        palettes.append(prepare_palette(palette_def, steps))
     return palettes
