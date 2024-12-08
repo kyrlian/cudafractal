@@ -1,8 +1,32 @@
-
 import pygame
 import pygame.freetype as ft
 from fractal.colors import K_Mode, Palette_Mode
 from fractal.fractal import Fractal_Mode
+from ui.keys_config import (
+    key_shift,
+    key_quit,
+    key_zoom,
+    key_screenshot,
+    key_pan_up,
+    key_pan_down,
+    key_pan_left,
+    key_pan_right,
+    key_iter,
+    key_escape_radius,
+    key_epsilon_reset,
+    key_epsilon,
+    key_power,
+    key_julia,
+    key_k_mode,
+    key_color_mode,
+    key_color_palette,
+    key_color_waves,
+    key_reset,
+    key_help,
+    key_display_info,
+)
+from pygame.key import name as key_name
+
 
 def print_info(
     appstate,
@@ -53,30 +77,33 @@ def print_info(
     blit_text(screen_surface, lines, info_position, font)
     pygame.display.flip()
 
+
 def print_help(appstate):
     print("Help:")
     print("    key(s): role, (default, current)")
-    print("    z, left click: zoom in")
-    print("    shift+z, right click: zoom out")
-    print("    up, down, left, right: pan")
+    print(f"    {key_name(key_zoom)}, left click: zoom in")
+    print(f"    {key_name(key_shift)}+{key_name(key_zoom)}, right click: zoom out")
+    print(f"    {key_name(key_pan_up)}, {key_name(key_pan_down)}, {key_name(key_pan_left)}, {key_name(key_pan_right)}: pan")
     k_mode_name = K_Mode(appstate.k_mode).name
-    print(f"    k: k mode (0, {appstate.k_mode}:{k_mode_name})")
+    print(f"    {key_name(key_k_mode)}: k mode (0, {appstate.k_mode}:{k_mode_name})")
     palette_mode_name = Palette_Mode(appstate.palette_mode).name
-    print(f"    c: palette mode (0, {appstate.palette_mode}:{palette_mode_name})")
-    print(f"    v: custom palette ({appstate.custom_palette_name})")
-    print(f"    w: color waves (2, {appstate.color_waves})")
-    print(f"    i: max iterations (1000, {appstate.max_iterations})")
-    print(f"    p: power(2, {appstate.power})")
-    print(f"    r: escape radius(4, {appstate.escape_radius})")
-    print(f"    e: epsilon (0.001, {appstate.epsilon})")
-    print(f"    a: epsilon=0 (0.001, {appstate.epsilon})")
+    print(f"    {key_name(key_color_mode)}: palette mode (0, {appstate.palette_mode}:{palette_mode_name})")
+    print(f"    {key_name(key_color_palette)}: custom palette ({appstate.custom_palette_name})")
+    print(f"    {key_name(key_color_waves)}: color waves (2, {appstate.color_waves})")
+    print(f"    {key_name(key_iter)}: max iterations (1000, {appstate.max_iterations})")
+    print(f"    {key_name(key_power)}: power(2, {appstate.power})")
+    print(f"    {key_name(key_escape_radius)}: escape radius(4, {appstate.escape_radius})")
+    print(f"    {key_name(key_epsilon)}: epsilon (0.001, {appstate.epsilon})")
+    print(f"    {key_name(key_epsilon_reset)}: epsilon=0 (0.001, {appstate.epsilon})")
     fractal_mode_name = Fractal_Mode(appstate.fractal_mode).name
     print(
-        f"    j: middle click: julia/mandelbrot (0, {appstate.fractal_mode}:{fractal_mode_name})"
+        f"    {key_name(key_julia)}: middle click: julia/mandelbrot (0, {appstate.fractal_mode}:{fractal_mode_name})"
     )
-    print("    d: display info")
-    print("    backspace: reset")
-    print("    q: quit")
+    print(f"    {key_name(key_display_info)}: display info")
+    print(f"    {key_name(key_screenshot)}: screenshot")
+    print(f"    {key_name(key_help)}: help")
+    print(f"    {key_name(key_reset)}: reset")
+    print(f"    {key_name(key_quit)}: quit")
     print(
         f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}"
     )
