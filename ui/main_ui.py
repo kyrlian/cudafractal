@@ -7,7 +7,7 @@ from utils.appState import AppState
 from fractal.fractal import init_arrays, compute_fractal
 from ui.info import print_info, print_help
 from ui.screenshot import screenshot, load_metada
-from fractal.palette import prepare_palettes, palettes_definitions, get_computed_palette
+from fractal.palette import prepare_palettes, palettes_definitions, get_computed_palette, palette_shift
 from ui.keys_config import (
     key_shift,
     key_shift_r,
@@ -26,13 +26,13 @@ from ui.keys_config import (
     key_julia,
     key_k_mode,
     key_color_mode,
-    key_color_palette,
+    key_color_palette,key_palette_shift,
     key_color_waves,
     key_reset,
     key_help,
     key_display_info,
 )
-
+from fractal.colors import Palette_Mode
 
 def pygamemain(src_image=None):
     def redraw(
@@ -46,9 +46,15 @@ def pygamemain(src_image=None):
         recalc_color=False,
     ):
         appstate.recalc_size()
-        custom_palette = get_computed_palette(
-            computed_palettes, appstate.custom_palette_name
-        )
+        if appstate.palette_mode == Palette_Mode.CUSTOM:
+            # Get custom palette and shift it
+            custom_palette = get_computed_palette(
+                computed_palettes, appstate.custom_palette_name
+            )
+            shifted_palette = palette_shift(custom_palette,appstate.palette_shift)
+        else:
+            shifted_palette=[]
+        # Compute fractal
         output_array_niter, output_array_z2, output_array_k, output_array_rgb = (
             compute_fractal(
                 output_array_niter,
@@ -68,7 +74,7 @@ def pygamemain(src_image=None):
                 appstate.juliaxy,
                 appstate.k_mode,
                 appstate.palette_mode,
-                custom_palette,
+                shifted_palette,
                 appstate.color_waves,
                 recalc_fractal,
                 recalc_color,
@@ -184,6 +190,13 @@ def pygamemain(src_image=None):
                     recalc_color = True
                 elif event.key == key_color_palette:
                     appstate.change_color_palette_name()
+                    appstate.reset_palette_shift()
+                    recalc_color = True
+                elif event.key == key_palette_shift:
+                    if shift:
+                        appstate.change_palette_shift(-1)
+                    else:
+                        appstate.change_palette_shift(1)
                     recalc_color = True
                 elif event.key == key_color_waves:
                     if shift:

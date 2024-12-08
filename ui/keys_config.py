@@ -16,6 +16,7 @@ key_julia = pygame.K_j
 key_k_mode = pygame.K_k
 key_color_mode = pygame.K_c
 key_color_palette = pygame.K_v
+key_palette_shift = pygame.K_b
 key_color_waves = pygame.K_w
 key_reset = pygame.K_BACKSPACE
 key_help = pygame.K_h

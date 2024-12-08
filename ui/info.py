@@ -19,7 +19,7 @@ from ui.keys_config import (
     key_julia,
     key_k_mode,
     key_color_mode,
-    key_color_palette,
+    key_color_palette,key_palette_shift,
     key_color_waves,
     key_reset,
     key_help,
@@ -79,6 +79,7 @@ def print_info(
 
 
 def print_help(appstate):
+    # TODO use default values from defaults.py
     print("Help:")
     print("    key(s): role, (default, current)")
     print(f"    {key_name(key_zoom)}, left click: zoom in")
@@ -89,6 +90,7 @@ def print_help(appstate):
     palette_mode_name = Palette_Mode(appstate.palette_mode).name
     print(f"    {key_name(key_color_mode)}: palette mode (0, {appstate.palette_mode}:{palette_mode_name})")
     print(f"    {key_name(key_color_palette)}: custom palette ({appstate.custom_palette_name})")
+    print(f"    {key_name(key_palette_shift)}: palette shift ({appstate.palette_shift})")
     print(f"    {key_name(key_color_waves)}: color waves (2, {appstate.color_waves})")
     print(f"    {key_name(key_iter)}: max iterations (1000, {appstate.max_iterations})")
     print(f"    {key_name(key_power)}: power(2, {appstate.power})")

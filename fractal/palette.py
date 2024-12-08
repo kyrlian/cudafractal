@@ -55,15 +55,24 @@ def prepare_palette(palette_colors, steps: type_math_int) -> List[type_color_int
 
 
 def prepare_palettes(
-    palletes_defs: dict, steps: type_math_int
+    palettes_defs: dict, steps: type_math_int
 ) -> Dict[str, List[type_color_int]]:
     print("Precomputing palettes")
     timerstart = default_timer()
     computed_palettes = {}
-    for name, palette_def in palletes_defs.items():
+    for name, palette_def in palettes_defs.items():
         computed_palettes[name]=(prepare_palette(palette_def, steps))
     print(f"Palettes calculated in {(default_timer() - timerstart)}s")
     return computed_palettes
+
+def palette_shift(palette: List[type_color_int], shift_dir: int) -> List[type_color_int]:
+    palette_len = len(palette)
+    new_palette = []
+    for i in range(palette_len):
+        color = palette[(i + shift_dir) % palette_len]
+        new_palette.append(color)
+    return new_palette
+
 
 def get_computed_palette(computed_palettes, name:str)->List[type_color_int]:
     return computed_palettes[name]
