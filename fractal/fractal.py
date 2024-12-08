@@ -1,8 +1,9 @@
-import timeit
-import numpy
+
+from timeit import default_timer
 from math import ceil
 from enum import IntEnum
 from typing import Tuple
+from numpy import vectorize as np_vectorize
 from utils.types import (
     type_math_int,
     type_math_float,
@@ -141,7 +142,7 @@ def fractal_cpu(
     run_vectorized = True
     if run_vectorized:
         # vectorized version:
-        vectorized_fractal_xy = numpy.vectorize(
+        vectorized_fractal_xy = np_vectorize(
             fractal_xy,
             otypes=[
                 type_math_int,
@@ -242,7 +243,7 @@ def compute_fractal(
     recalc_fractal: bool = True,
     recalc_color: bool = False,
 ):
-    timerstart = timeit.default_timer()
+    timerstart = default_timer()
     (screenw, screenh) = WINDOW_SIZE
     xstep = abs(xmax - xmin) / screenw
     ystep = abs(ymax - ymin) / screenh
@@ -334,5 +335,5 @@ def compute_fractal(
                     color_waves,
                 )
             )
-    print(f"Frame calculated in {(timeit.default_timer() - timerstart)}s")
+    print(f"Frame calculated in {(default_timer() - timerstart)}s")
     return output_array_niter, output_array_z2, output_array_k, output_array_rgb

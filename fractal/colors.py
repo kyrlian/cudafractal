@@ -1,6 +1,6 @@
 from math import log
 from enum import IntEnum
-from typing import Tuple
+from typing import Tuple, List
 from utils.cuda import cuda_jit, cuda_grid
 from utils.types import (
     type_math_float,
@@ -10,7 +10,6 @@ from utils.types import (
     type_color_int,
     type_color_int_small,
 )
-
 
 class K_Mode(IntEnum):
     ITER_WAVES = 0
@@ -26,6 +25,11 @@ class Palette_Mode(IntEnum):
     GRAYSCALE = 1
     CUSTOM = 2
 
+@cuda_jit("uint32(uint32[:], float64)", device=True)
+def get_color(computed_palette:List[type_color_int], k: type_math_float) -> type_color_int:
+    # assert k >= 0.0 and k <= 1.0, "k must be between 0.0 and 1.0"
+    i = type_math_int(k * len(computed_palette))
+    return computed_palette[i]
 
 @cuda_jit("uint32(uint8, uint8, uint8)", device=True)
 def rgb_to_packed(
@@ -86,16 +90,16 @@ def compute_color_custom(k: type_math_float) -> type_color_int:
         if k >= color_a_k and k < color_b_k:
             ratio_a = 1.0 - (k - color_a_k) / (color_b_k - color_a_k)
             ratio_b = 1.0 - ratio_a
-            r = int(color_a_red * ratio_a + color_b_red * ratio_b)
-            g = int(color_a_green * ratio_a + color_b_green * ratio_b)
-            b = int(color_a_blue * ratio_a + color_b_blue * ratio_b)
+            r = type_color_int_small(color_a_red * ratio_a + color_b_red * ratio_b)
+            g = type_color_int_small(color_a_green * ratio_a + color_b_green * ratio_b)
+            b = type_color_int_small(color_a_blue * ratio_a + color_b_blue * ratio_b)
             return rgb_to_packed(r, g, b)
     return type_color_int(0)
 
 
 @cuda_jit("uint32(float64, uint8)", device=True)
 def compute_pixel_color(
-    k: type_math_float, palette_mode: type_enum_int
+    k: type_math_float, palette_mode: type_enum_int #TODO get custom_palette
 ) -> type_color_int:
     # calculate color from k
     match palette_mode:
@@ -108,6 +112,7 @@ def compute_pixel_color(
             kk = int(k * 255)
             return rgb_to_packed(kk, kk, kk)
         case Palette_Mode.CUSTOM:  # custom palette_mode k to rgb
+            # return get_color(custom_palette, k) #TODO test custom_palette
             return compute_color_custom(k)
         case _:
             return rgb_to_packed(255, 0, 0)

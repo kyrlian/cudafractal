@@ -7,7 +7,7 @@ from utils.appState import AppState
 from fractal.fractal import init_arrays, compute_fractal
 from ui.info import print_info, print_help
 from ui.screenshot import screenshot, load_metada
-
+from fractal.palette import prepare_palettes, palletes_definitions
 
 def pygamemain(src_image=None):
     def redraw(
@@ -62,6 +62,8 @@ def pygamemain(src_image=None):
     # Init the display
     screen_surface = pygame.display.set_mode(appstate.WINDOW_SIZE, pygame.HWSURFACE)
     print_help(appstate)
+    # Init palettes
+    computed_palettes = prepare_palettes(palletes_definitions, appstate.max_iterations)
     # init matrices
     output_array_niter, output_array_z2, output_array_k, output_array_rgb = init_arrays(
         appstate.WINDOW_SIZE
@@ -118,6 +120,8 @@ def pygamemain(src_image=None):
                             appstate.change_max_iterations(0.9)
                         else:
                             appstate.change_max_iterations(1.1)
+                        # Recompute palettes
+                        computed_palettes = prepare_palettes(palletes_definitions, appstate.max_iterations)
                         recalc_fractal = True
                     case pygame.K_r:
                         if shift:

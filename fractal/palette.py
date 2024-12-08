@@ -1,8 +1,11 @@
-from typing import List
-from fractal.colors import rgb_to_packed
-from utils.cuda import cuda_jit
+from typing import List, Tuple
+from timeit import default_timer
 from utils.types import (
+    type_math_float,
+    type_math_int,
+    type_color_float,
     type_color_int,
+    type_color_int_small,
 )
 
 
@@ -12,32 +15,52 @@ palletes_definitions = {
 }
 
 
-def compute_color(colors, k) -> type_color_int:
-    for i in range(len(colors) - 1):
-        color_a_k, color_a_red, color_a_green, color_a_blue = colors[i]
-        color_b_k, color_b_red, color_b_green, color_b_blue = colors[i + 1]
+def rgb_to_packed(
+    r: type_color_int_small, g: type_color_int_small, b: type_color_int_small
+) -> type_color_int:
+    # r, g, b should be [0:255]
+    # Cant assert in device function
+    # assert r >= 0 and r <= 255, f"r should be in [0:255], got {r}"
+    # assert g >=  0 and g  <= 255, f"g should be in [0:255], got {g}"
+    # assert b >=  0 and b  <= 255, f"b should be in [0:255], got {b}"
+    packed = ((type_color_int(r) * 256) + g) * 256 + b
+    return packed
+
+
+def compute_color(
+    palette_colors: List[
+        Tuple[type_math_float, type_color_float, type_color_float, type_color_float]
+    ],
+    k: type_math_float,
+) -> type_color_int:
+    for i in range(len(palette_colors) - 1):
+        color_a_k, color_a_red, color_a_green, color_a_blue = palette_colors[i]
+        color_b_k, color_b_red, color_b_green, color_b_blue = palette_colors[i + 1]
         if k >= color_a_k and k < color_b_k:
             ratio_a = 1.0 - (k - color_a_k) / (color_b_k - color_a_k)
             ratio_b = 1.0 - ratio_a
-            r = int(color_a_red * ratio_a + color_b_red * ratio_b)
-            g = int(color_a_green * ratio_a + color_b_green * ratio_b)
-            b = int(color_a_blue * ratio_a + color_b_blue * ratio_b)
+            r = type_color_int_small(color_a_red * ratio_a + color_b_red * ratio_b)
+            g = type_color_int_small(color_a_green * ratio_a + color_b_green * ratio_b)
+            b = type_color_int_small(color_a_blue * ratio_a + color_b_blue * ratio_b)
             return rgb_to_packed(r, g, b)
     return type_color_int(0)
 
 
-def prepare_palette(colors, steps) -> List[type_color_int]:
-    palette = []
+def prepare_palette(palette_colors, steps: type_math_int) -> List[type_color_int]:
+    computed_palette = []
     for i in range(steps):
         k = i / steps
-        palette.append(compute_color(colors, k))
-    return palette
+        computed_palette.append(compute_color(palette_colors, k))
+    return computed_palette
 
 
 def prepare_palettes(
-    palletes_definition: dict, steps: int
+    palletes_defs: dict, steps: type_math_int
 ) -> List[List[type_color_int]]:
-    palettes = []
-    for name, palette_def in palletes_definitions.items():
-        palettes.append(prepare_palette(palette_def, steps))
-    return palettes
+    print("Precomputing palettes")
+    timerstart = default_timer()
+    computed_palettes = []
+    for name, palette_def in palletes_defs.items():
+        computed_palettes.append(prepare_palette(palette_def, steps))
+    print(f"Palettes calculated in {(default_timer() - timerstart)}s")
+    return computed_palettes
