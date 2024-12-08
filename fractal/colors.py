@@ -1,8 +1,7 @@
 from math import log
 from enum import IntEnum
-from pygame import Color
-from typing import List
-from utils.cuda import cuda_jit
+from typing import Tuple
+from utils.cuda import cuda_jit, cuda_grid
 from utils.types import (
     type_math_float ,
     type_math_int,
@@ -105,7 +104,7 @@ def compute_pixel_color(k: type_math_float, palette_mode: type_enum_int) -> type
 
 
 @cuda_jit(
-    "float64(int32, int32, float64, int32, float64, uint8, int32)",
+    "float64(int32, int32, float64, int32, uint8, int32)",
     device=True,
 )
 def compute_pixel_k(
@@ -113,7 +112,6 @@ def compute_pixel_k(
     max_iterations: type_math_int,
     z2: type_math_float,
     escape_radius: type_math_int,
-    der2: type_math_float,
     k_mode: type_enum_int,
     color_waves: type_math_int,
 ) -> type_math_float:
@@ -140,27 +138,85 @@ def compute_pixel_k(
                 k = 1 / z2
     return k
 
+@cuda_jit(
+    "(int32, int32, int32, int32, float64, int32, uint8, uint8, int32)",
+    device=True,
+)
+def color_xy(
+    x: type_math_int,
+    y: type_math_int,
+    nb_iter: type_math_int,
+    max_iterations: type_math_int,
+    z2: type_math_float,
+    escape_radius: type_math_int,
+    k_mode: type_enum_int,
+    palette_mode: type_enum_int,
+    color_waves: type_math_int,
+) -> Tuple[type_math_float, type_color_int]:
+    k = compute_pixel_k(
+        nb_iter,
+        max_iterations,
+        z2,
+        escape_radius,
+        k_mode,
+        color_waves,
+    )
+    packedrgb = compute_pixel_color(k, palette_mode)
+    return k, packedrgb
 
-def build_custom_palette(color_list: List[Color], steps):
-    if len(color_list) == 0:
-        color_list.append(Color("white"))
-    if len(color_list) == 1:
-        color_list.append(Color("black"))
-    steps_by_color = int(steps / (len(color_list) - 1))
-    custom_palette = []
-    for i in range(len(color_list) - 1):
-        ColorA = color_list[i]
-        ColorB = color_list[i + 1]
-        for j in range(steps_by_color):
-            InterimColor = ColorA.lerp(ColorB, j / steps_by_color)
-            packed = (InterimColor.r * 256 + InterimColor.g) * 256 + InterimColor.b
-            custom_palette.append(packed)
-    return custom_palette
+
+@cuda_jit(
+    "(int32[:,:], float64[:,:], float64[:,:], int32[:,:], int32, int32, uint8, uint8, int32)"
+)
+def color_kernel(
+    device_array_niter,
+    device_array_z2,
+    device_array_k,
+    device_array_rgb,
+    max_iterations: type_math_int,
+    escape_radius: type_math_int,
+    k_mode: type_enum_int,
+    palette_mode: type_enum_int,
+    color_waves: type_math_int,
+) -> None:
+    x, y = cuda_grid(2)
+    if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
+        nb_iter = device_array_niter[x, y]
+        z2 = device_array_z2[x, y]
+        k, packedrgb = color_xy(
+            x,
+            y,
+            nb_iter,
+            max_iterations,
+            z2,
+            escape_radius,
+            k_mode,
+            palette_mode,
+            color_waves,
+        )
+        device_array_k[x, y] = k
+        device_array_rgb[x, y] = packedrgb
+
+# def build_custom_palette(color_list: List[Color], steps):
+#     if len(color_list) == 0:
+#         color_list.append(Color("white"))
+#     if len(color_list) == 1:
+#         color_list.append(Color("black"))
+#     steps_by_color = int(steps / (len(color_list) - 1))
+#     custom_palette = []
+#     for i in range(len(color_list) - 1):
+#         ColorA = color_list[i]
+#         ColorB = color_list[i + 1]
+#         for j in range(steps_by_color):
+#             InterimColor = ColorA.lerp(ColorB, j / steps_by_color)
+#             packed = (InterimColor.r * 256 + InterimColor.g) * 256 + InterimColor.b
+#             custom_palette.append(packed)
+#     return custom_palette
 
 
-def init_custom_palette_sample():
-    return build_custom_palette([Color("Black"), Color("Red"), Color("White")], 1000)
+# def init_custom_palette_sample():
+#     return build_custom_palette([Color("Black"), Color("Red"), Color("White")], 1000)
 
 
-def get_custom_palette_mode_color(custom_palette, x):
-    return custom_palette[x % len(custom_palette)]
+# def get_custom_palette_mode_color(custom_palette, x):
+#     return custom_palette[x % len(custom_palette)]
