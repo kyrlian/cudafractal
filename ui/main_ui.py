@@ -4,10 +4,9 @@ import pygame
 import pygame.freetype as ft
 import argparse
 from utils.appState import AppState
-from fractal.fractal import init_arrays, compute_fractal, Fractal_Mode
-from fractal.colors import K_Mode, Palette_Mode
-from PIL import Image
-from PIL.PngImagePlugin import PngInfo
+from fractal.fractal import init_arrays, compute_fractal
+from ui.info import print_info, print_help
+from ui.screenshot import screenshot, load_metada
 
 
 def pygamemain(src_image=None):
@@ -49,107 +48,9 @@ def pygamemain(src_image=None):
         )
         pygame.pixelcopy.array_to_surface(screen_surface, output_array_rgb)
         if appstate.show_info:
-            print_info(screen_surface)
+            print_info(appstate, screen_surface)
         pygame.display.flip()
         return output_array_niter, output_array_z2, output_array_k, output_array_rgb
-
-    def print_info(
-        screen_surface,
-        ni=None,
-        z2=None,
-        k=None,
-        rgb=None,
-        bgcolor=pygame.Color("white"),
-        fgcolor=pygame.Color("black"),
-    ):
-        info_position = (10, 10)
-        padding = 1
-        line_spacing = 5
-        lines = appstate.get_info()
-        if ni is not None:
-            lines.append(f"niter: {ni}")
-        if z2 is not None:
-            lines.append(f"z2: {z2}")
-        if k is not None:
-            lines.append(f"k: {k}")
-        if rgb is not None:
-            lines.append(f"rgb: {rgb}")
-        font = ft.SysFont("Arial", 12)
-
-        # draw a rectangle
-        def blit_text(surface, lines, pos, font):
-            x, y = pos
-            maxx, maxy = x, y
-            for line in lines:
-                bounding_rect = font.render_to(surface, (x, y), line, fgcolor, bgcolor)
-                maxx = max(bounding_rect.right, maxx)
-                maxy = y
-                y += bounding_rect.height + line_spacing  # Start on new row
-            return (maxx, maxy)
-
-        rect_bottom_left = blit_text(screen_surface, lines, info_position, font)
-        pygame.draw.rect(
-            screen_surface,
-            bgcolor,
-            (
-                info_position[0] - padding,
-                info_position[1] - padding,
-                rect_bottom_left[0] + padding,
-                rect_bottom_left[1] + padding,
-            ),
-        )
-        blit_text(screen_surface, lines, info_position, font)
-        pygame.display.flip()
-
-    def print_help(appstate):
-        print("Help:")
-        print("    key(s): role, (default, current)")
-        print("    z, left click: zoom in")
-        print("    shift+z, right click: zoom out")
-        print("    up, down, left, right: pan")
-        k_mode_name = K_Mode(appstate.k_mode).name
-        print(f"    k:  k mode (0, {appstate.k_mode}:{k_mode_name})")
-        palette_mode_name = Palette_Mode(appstate.palette_mode).name
-        print(f"    c:  palette mode (0, {appstate.palette_mode}:{palette_mode_name})")
-        print(f"    w:  color waves (2, {appstate.color_waves})")
-        print(f"    i:  max iterations (1000, {appstate.max_iterations})")
-        print(f"    p:  power(2, {appstate.power})")
-        print(f"    r:  escape radius(4, {appstate.escape_radius})")
-        print(f"    e:  epsilon (0.001, {appstate.epsilon})")
-        print(f"    a:  epsilon=0 (0.001, {appstate.epsilon})")
-        fractal_mode_name = Fractal_Mode(appstate.fractal_mode).name
-        print(
-            f"    j:  middle click: julia/mandelbrot (0, {appstate.fractal_mode}:{fractal_mode_name})"
-        )
-        print("    d:  display info")
-        print("    backspace: reset")
-        print("    q: quit")
-        print(
-            f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}"
-        )
-
-    def screenshot(appstate):
-        filename = "screenshot.png"
-        # TODO - add timestamp
-        pygame.image.save(screen_surface, filename)
-        # add metadata
-        metadata_info = appstate.get_info_table()
-        targetImage = Image.open(filename)
-        metadata = PngInfo()
-        for key, value in metadata_info.items():
-            print(f"Adding metadata {key}:{value}")
-            metadata.add_text(key, f"{value}")
-        targetImage.save(filename, pnginfo=metadata)
-        print(f"Saved screenshot to {filename}")
-
-    def load_metada(filename, appstate):
-        print(f"Loading metadata from {filename}")
-        srcImage = Image.open(filename)
-        srcImage.load()
-        info_table = srcImage.info
-        print(f"Metadata info_table: {info_table}")
-        appstate.set_from_info_table(info_table)
-        return info_table
 
     # Initialize pygame
     pygame.init()
@@ -277,7 +178,7 @@ def pygamemain(src_image=None):
                 z2 = output_array_z2[mx, my]
                 k = output_array_k[mx, my]
                 rgb = output_array_rgb[mx, my]
-                print_info(screen_surface, ni, z2, k, rgb)
+                print_info(appstate, screen_surface, ni, z2, k, rgb)
             if recalc_fractal or recalc_color:
                 (
                     output_array_niter,
