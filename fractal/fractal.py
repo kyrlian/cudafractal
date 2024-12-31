@@ -73,6 +73,8 @@ def fractal_xy(
         palette_mode,custom_palette,
         color_waves,
     )
+    # Fractal step only gives niter and derivative
+    # then compute min/max of each, so palette step can set k based on min/max niter of current image 
     return nb_iter, z2, k, packedrgb
 
 
