@@ -105,23 +105,29 @@ def compute_color_custom(k: type_math_float) -> type_color_int:
 
 
 @cuda_jit(
-    "(int32, int32, int32, int32, float64, int32, uint8, uint8, uint32[:], int32)",
+    "(int32, int32, int32, int32, int32, int32, float64, float64, float64, int32, float64, float64, float64, uint8, uint8, uint32[:], int32)",
     device=True,
 )
 def color_xy(
     x: type_math_int,
     y: type_math_int,
     nb_iter: type_math_int,
+    niter_min: type_math_int,
+    niter_max: type_math_int,
     max_iterations: type_math_int,
     z2: type_math_float,
+    z2_min: type_math_float,
+    z2_max: type_math_float,
     escape_radius: type_math_int,
+    der2: type_math_float,
+    der2_min: type_math_float,
+    der2_max: type_math_float,
     k_mode: type_enum_int,
     palette_mode: type_enum_int,
     custom_palette: List[type_color_int],
     color_waves: type_math_int,
 ) -> Tuple[type_math_float, type_color_int]:
-    # get min/max of nb_iter and z2, so palette step can set k based on min/max niter of current image 
-
+    # TODO use min/max of nb_iter and z2, so palette step can set k based on min/max niter of current image
     # calculate k[0-1] based on k mode
     k = type_math_float(0.0)
     if z2 > escape_radius:
@@ -161,13 +167,20 @@ def color_xy(
 
 
 @cuda_jit(
-    "(int32[:,:], float64[:,:], float64[:,:], int32[:,:], int32, int32, uint8, uint8, uint32[:], int32)"
+    "(int32[:,:], float64[:,:], float64[:,:], float64[:,:], int32[:,:], int32, int32, float64, float64, float64, float64, int32, int32, uint8, uint8, uint32[:], int32)"
 )
 def color_kernel(
     device_array_niter,
     device_array_z2,
+    device_array_der2,
     device_array_k,
     device_array_rgb,
+    niter_min: type_math_int,
+    niter_max: type_math_int,
+    z2_min: type_math_float,
+    z2_max: type_math_float,
+    der2_min: type_math_float,
+    der2_max: type_math_float,
     max_iterations: type_math_int,
     escape_radius: type_math_int,
     k_mode: type_enum_int,
@@ -179,13 +192,21 @@ def color_kernel(
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
         nb_iter = device_array_niter[x, y]
         z2 = device_array_z2[x, y]
+        der2 = device_array_der2[x, y]
         k, packedrgb = color_xy(
             x,
             y,
             nb_iter,
+            niter_min,
+            niter_max,
             max_iterations,
             z2,
+            z2_min,
+            z2_max,
             escape_radius,
+            der2,
+            der2_min,
+            der2_max,
             k_mode,
             palette_mode,
             custom_palette,
@@ -198,8 +219,15 @@ def color_kernel(
 def color_cpu(
     output_array_niter,
     output_array_z2,
+    device_array_der2,
     output_array_k,
     output_array_rgb,
+    niter_min: type_math_int,
+    niter_max: type_math_int,
+    z2_min: type_math_float,
+    z2_max: type_math_float,
+    der2_min: type_math_float,
+    der2_max: type_math_float,
     max_iterations: type_math_int,
     escape_radius: type_math_int,
     k_mode: type_enum_int,
@@ -216,9 +244,16 @@ def color_cpu(
                 x,
                 y,
                 nb_iter,
+                niter_min,
+                niter_max,
                 max_iterations,
                 z2,
+                z2_min,
+                z2_max,
                 escape_radius,
+                der2,
+                der2_min,
+                der2_max,
                 k_mode,
                 palette_mode,
                 custom_palette,

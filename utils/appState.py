@@ -9,39 +9,40 @@ from utils.types import (
 from fractal.colors import K_Mode, Palette_Mode
 from fractal.fractal import Fractal_Mode
 from fractal.palette import palettes_definitions
+from utils import defaults
+from utils import const
 
 
 @dataclass
 class AppState:
     def __init__(self):
-        # TODO use default values from defaults.py
-
+        # uses default values from defaults.py
         # fractal variables
-        self.xcenter = type_math_float(-0.5)
-        self.ycenter = type_math_float(0)
-        self.yheight = type_math_float(3)
-        self.max_iterations = type_math_int(1000)
-        self.power = type_math_int(2)
-        self.escape_radius = type_math_int(4)
-        self.epsilon = type_math_float(0.001)
-        self.fractal_mode = type_enum_int(Fractal_Mode.MANDELBROT)
-        self.juliaxy = type_math_complex(0 + 0j)
+        self.xcenter = defaults.xcenter
+        self.ycenter = defaults.ycenter
+        self.yheight = defaults.yheight
+        self.max_iterations = defaults.max_iterations
+        self.power = defaults.power
+        self.escape_radius = defaults.escape_radius
+        self.epsilon = defaults.epsilon
+        self.fractal_mode = defaults.fractal_mode
+        self.juliaxy = defaults.juliaxy
 
         # color variables
-        self.palette_mode = type_enum_int(Palette_Mode.HUE)
-        self.k_mode = type_enum_int(K_Mode.ITER_WAVES)
-        self.color_waves = type_math_int(2)
-        self.custom_palette_name = list(palettes_definitions.keys())[0]
-        self.palette_shift=type_math_int(0)
+        self.palette_mode = defaults.palette_mode
+        self.k_mode = defaults.k_mode
+        self.color_waves = defaults.color_waves
+        self.custom_palette_name = defaults.custom_palette_name
+        self.palette_shift = defaults.palette_shift
 
         # UI variables
-        self.show_info = True
+        self.show_info = defaults.show_info
 
         # Const
-        self.ZOOM_RATE = 2
-        self.PAN_SPEED = 0.3  # ratio of xmax-xmin
-        self.DISPLAY_HEIGTH = 1024
-        self.DISPLAY_RATIO = 4 / 3
+        self.ZOOM_RATE = const.ZOOM_RATE
+        self.PAN_SPEED = const.PAN_SPEED
+        self.DISPLAY_HEIGTH = const.DISPLAY_HEIGTH
+        self.DISPLAY_RATIO = const.DISPLAY_RATIO
         self.DISPLAY_WIDTH = math.floor(self.DISPLAY_HEIGTH * self.DISPLAY_RATIO)
         self.WINDOW_SIZE = self.DISPLAY_WIDTH, self.DISPLAY_HEIGTH
 
@@ -91,11 +92,11 @@ class AppState:
         print(f"Custom palette: ({self.custom_palette_name})")
 
     def change_palette_shift(self, plusminus):
-        self.palette_shift+=type_math_int(plusminus)
+        self.palette_shift += type_math_int(plusminus)
         print(f"Palette shift: {self.palette_shift}")
 
     def reset_palette_shift(self):
-        self.palette_shift=type_math_int(0)
+        self.palette_shift = type_math_int(0)
         print(f"Palette shift: {self.palette_shift}")
 
     def change_color_waves(self, plusminus):
@@ -193,37 +194,56 @@ class AppState:
             return default
 
     def set_from_info_table(self, info_table):
-        # TODO use default values from defaults.py
+        # use default values from defaults.py if info is missing
         self.fractal_mode = type_enum_int(
-            self.get_info_table_value(info_table, "fractal_mode", 0)
+            self.get_info_table_value(info_table, "fractal_mode", defaults.fractal_mode)
         )
-        self.xmin = type_math_float(self.get_info_table_value(info_table, "xmin", -2.5))
-        self.xmax = type_math_float(self.get_info_table_value(info_table, "xmax", 1.5))
-        self.ymin = type_math_float(self.get_info_table_value(info_table, "ymin", -1.5))
-        self.ymax = type_math_float(self.get_info_table_value(info_table, "ymax", 1.5))
-        self.k_mode = type_enum_int(self.get_info_table_value(info_table, "k_mode", 0))
+        self.xmin = type_math_float(
+            self.get_info_table_value(info_table, "xmin", defaults.xmin)
+        )
+        self.xmax = type_math_float(
+            self.get_info_table_value(info_table, "xmax", defaults.xmax)
+        )
+        self.ymin = type_math_float(
+            self.get_info_table_value(info_table, "ymin", defaults.ymin)
+        )
+        self.ymax = type_math_float(
+            self.get_info_table_value(info_table, "ymax", defaults.ymax)
+        )
+        self.k_mode = type_enum_int(
+            self.get_info_table_value(info_table, "k_mode", defaults.k_mode)
+        )
         self.palette_mode = type_enum_int(
-            self.get_info_table_value(info_table, "palette_mode", 0)
+            self.get_info_table_value(info_table, "palette_mode", defaults.palette_mode)
         )
         self.custom_palette_name = self.get_info_table_value(
-            info_table, "custom_palette_name", list(palettes_definitions.keys())[0]
+            info_table, "custom_palette_name", defaults.custom_palette_name
         )
         self.palette_shift = type_math_int(
-            self.get_info_table_value(info_table, "palette_shift", 0)
+            self.get_info_table_value(
+                info_table, "palette_shift", defaults.palette_shift
+            )
         )
         self.color_waves = type_math_int(
-            self.get_info_table_value(info_table, "color_waves", 2)
+            self.get_info_table_value(info_table, "color_waves", defaults.color_waves)
         )
         self.max_iterations = type_math_int(
-            self.get_info_table_value(info_table, "max_iterations", 1000)
+            self.get_info_table_value(
+                info_table, "max_iterations", defaults.max_iterations
+            )
         )
-        self.power = type_math_int(self.get_info_table_value(info_table, "power", 2))
+        self.power = type_math_int(
+            self.get_info_table_value(info_table, "power", defaults.power)
+        )
         self.escape_radius = type_math_int(
-            self.get_info_table_value(info_table, "escape_radius", 4)
+            self.get_info_table_value(
+                info_table, "escape_radius", defaults.escape_radius
+            )
         )
         self.epsilon = type_math_float(
-            self.get_info_table_value(info_table, "epsilon", 0.001)
+            self.get_info_table_value(info_table, "epsilon", defaults.epsilon)
         )
+        # recalc derived variables
         self.xcenter = type_math_float(self.xmin + (self.xmax - self.xmin) / 2)
         self.ycenter = type_math_float(self.ymin + (self.ymax - self.ymin) / 2)
         self.yheight = type_math_float(self.ymax - self.ymin)

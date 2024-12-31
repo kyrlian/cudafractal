@@ -1,4 +1,3 @@
-
 from timeit import default_timer
 from math import ceil
 from enum import IntEnum
@@ -20,7 +19,7 @@ from utils.cuda import (
     cuda_copy_to_device,
     cuda_copy_to_host,
 )
-from fractal.colors import color_kernel, color_xy, color_cpu
+from fractal.colors import color_kernel, color_cpu
 
 
 class Fractal_Mode(IntEnum):
@@ -29,7 +28,7 @@ class Fractal_Mode(IntEnum):
 
 
 @cuda_jit(
-    "(int32, int32, complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, uint32[:], int32)",
+    "(int32, int32, complex128, float64, float64, uint8, int32, int32, int32, float64, complex128)",
     device=True,
 )
 def fractal_xy(
@@ -44,10 +43,7 @@ def fractal_xy(
     escape_radius: type_math_int,
     epsilon: type_math_float,
     juliaxy: type_math_complex,
-    k_mode: type_enum_int,
-    palette_mode: type_enum_int,custom_palette:List[type_color_int],
-    color_waves: type_math_int,
-) -> Tuple[type_math_int, type_math_float, type_math_float, type_color_int]:
+) -> Tuple[type_math_int, type_math_float, type_math_float]:
     z: type_math_complex = type_math_complex(
         topleft + type_math_float(x) * xstep - 1j * y * ystep
     )
@@ -62,30 +58,16 @@ def fractal_xy(
         nb_iter += 1
         z2 = z.real**2 + z.imag**2
         der2 = der.real**2 + der.imag**2
-    k, packedrgb = color_xy(
-        x,
-        y,
-        nb_iter,
-        max_iterations,
-        z2,
-        escape_radius,
-        k_mode,
-        palette_mode,custom_palette,
-        color_waves,
-    )
-    # Fractal step only gives niter and derivative
-    # then compute min/max of each, so palette step can set k based on min/max niter of current image 
-    return nb_iter, z2, k, packedrgb
+    return nb_iter, z2, der2
 
 
 @cuda_jit(
-    "(int32[:,:], float64[:,:], float64[:,:], int32[:,:], complex128, float64, float64, uint8, int32, int32, int32, float64, complex128, uint8, uint8, uint32[:], int32)"
+    "(int32[:,:], float64[:,:], float64[:,:], complex128, float64, float64, uint8, int32, int32, int32, float64, complex128)"
 )
 def fractal_kernel(
     device_array_niter,
     device_array_z2,
-    device_array_k,
-    device_array_rgb,
+    device_array_der2,
     topleft: type_math_complex,
     xstep: type_math_float,
     ystep: type_math_float,
@@ -95,13 +77,10 @@ def fractal_kernel(
     escape_radius: type_math_int,
     epsilon: type_math_float,
     juliaxy: type_math_complex,
-    k_mode: type_enum_int,
-    palette_mode: type_enum_int,custom_palette:List[type_color_int],
-    color_waves: type_math_int,
 ) -> None:
     x, y = cuda_grid(2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
-        nb_iter, z2, k, packedrgb = fractal_xy(
+        nb_iter, z2, der2 = fractal_xy(
             x,
             y,
             topleft,
@@ -113,21 +92,41 @@ def fractal_kernel(
             escape_radius,
             epsilon,
             juliaxy,
-            k_mode,
-            palette_mode,custom_palette,
-            color_waves,
         )
         device_array_niter[x, y] = nb_iter
         device_array_z2[x, y] = z2
-        device_array_k[x, y] = k
-        device_array_rgb[x, y] = packedrgb
+        device_array_der2[x, y] = der2
+
+def compute_min_max_cuda(
+    output_array_niter,
+    output_array_z2,
+    output_array_der2
+):
+    # TODO: optimize this function using cuda
+    niter_min = niter_max = output_array_niter[0][0]
+    z2_min = z2_max = output_array_z2[0][0]
+    der2_min = der2_max = output_array_der2[0][0]
+    for x in range(output_array_niter.shape[0]):
+        for y in range(output_array_niter.shape[1]):
+            if niter_min > output_array_niter[x][y]:
+                niter_min = output_array_niter[x][y]
+            if niter_max < output_array_niter[x][y]:
+                niter_max = output_array_niter[x][y]
+            if z2_min > output_array_z2[x][y]:
+                z2_min = output_array_z2[x][y]
+            if z2_max < output_array_z2[x][y]:
+                z2_max = output_array_z2[x][y]
+            if der2_min > output_array_der2[x][y]:
+                der2_min = output_array_der2[x][y]
+            if der2_max < output_array_der2[x][y]:
+                der2_max = output_array_der2[x][y]
+    return niter_min, niter_max, z2_min, z2_max,  der2_min, der2_max 
 
 
 def fractal_cpu(
     output_array_niter,
     output_array_z2,
-    output_array_k,
-    output_array_rgb,
+    output_array_der2,
     topleft: type_math_complex,
     xstep: type_math_float,
     ystep: type_math_float,
@@ -137,22 +136,14 @@ def fractal_cpu(
     escape_radius: type_math_int,
     epsilon: type_math_float,
     juliaxy: type_math_complex,
-    k_mode: type_enum_int,
-    palette_mode: type_enum_int,custom_palette:List[type_color_int],
-    color_waves: type_math_int,
 ):
     run_vectorized = True
     if run_vectorized:
         # vectorized version:
         vectorized_fractal_xy = np_vectorize(
             fractal_xy,
-            otypes=[
-                type_math_int,
-                type_math_float,
-                type_math_float,
-                type_color_int,
-            ],
-        )  # fractal_xy returns nb_iter, z2, k, packedrgb
+            otypes=[type_math_int, type_math_float, type_math_float],
+        )  # fractal_xy returns nb_iter, z2, der2
         # vector_x and vector_y need to be same size, and represent all matrix cells:
         matrix_x = []
         matrix_y = []
@@ -176,18 +167,13 @@ def fractal_cpu(
             escape_radius,
             epsilon,
             juliaxy,
-            k_mode,
-            palette_mode,custom_palette,
-            color_waves,
         )
-        output_array_niter, output_array_z2, output_array_k, output_array_rgb = (
-            result_arrays
-        )
+        output_array_niter, output_array_z2, output_array_der2 = result_arrays
     else:
         # NON vectorized version:
         for x in range(output_array_niter.shape[0]):
             for y in range(output_array_niter.shape[1]):
-                niter, z2, k, packedrgb = fractal_xy(
+                niter, z2, der2 = fractal_xy(
                     x,
                     y,
                     topleft,
@@ -199,33 +185,58 @@ def fractal_cpu(
                     escape_radius,
                     epsilon,
                     juliaxy,
-                    k_mode,
-                    palette_mode,custom_palette,
-                    color_waves,
                 )
                 output_array_niter[x, y] = niter
                 output_array_z2[x, y] = z2
-                output_array_k[x, y] = k
-                output_array_rgb[x, y] = packedrgb
-    return output_array_niter, output_array_z2, output_array_k, output_array_rgb
+                output_array_der2[x, y] = der2
+    return output_array_niter, output_array_z2, output_array_der2
+
+
+def compute_min_max_cpu(
+    output_array_niter,
+    output_array_z2,
+    output_array_der2,
+):
+    # TODO: optimize this function using numpy
+    niter_min = niter_max = output_array_niter[0][0]
+    z2_min = z2_max = output_array_z2[0][0]
+    der2_min = der2_max = output_array_der2[0][0]
+    for x in range(output_array_niter.shape[0]):
+        for y in range(output_array_niter.shape[1]):
+            if niter_min > output_array_niter[x][y]:
+                niter_min = output_array_niter[x][y]
+            if niter_max < output_array_niter[x][y]:
+                niter_max = output_array_niter[x][y]
+            if z2_min > output_array_z2[x][y]:
+                z2_min = output_array_z2[x][y]
+            if z2_max < output_array_z2[x][y]:
+                z2_max = output_array_z2[x][y]
+            if der2_min > output_array_der2[x][y]:
+                der2_min = output_array_der2[x][y]
+            if der2_max < output_array_der2[x][y]:
+                der2_max = output_array_der2[x][y]
+    return niter_min, niter_max, z2_min, z2_max,  der2_min, der2_max 
 
 
 def init_arrays(WINDOW_SIZE):
     (screenw, screenh) = WINDOW_SIZE
     device_array_niter = init_array(screenw, screenh, type_math_int)
     device_array_z2 = init_array(screenw, screenh, type_math_float)
+    device_array_der2 = init_array(screenw, screenh, type_math_float)
     device_array_k = init_array(screenw, screenh, type_math_float)
     device_array_rgb = init_array(screenw, screenh, type_math_int)
     output_array_niter = cuda_copy_to_host(device_array_niter)
     output_array_z2 = cuda_copy_to_host(device_array_z2)
+    output_array_der2 = cuda_copy_to_host(device_array_der2)
     output_array_k = cuda_copy_to_host(device_array_k)
     output_array_rgb = cuda_copy_to_host(device_array_rgb)
-    return output_array_niter, output_array_z2, output_array_k, output_array_rgb
+    return output_array_niter, output_array_z2, output_array_der2, output_array_k, output_array_rgb
 
 
 def compute_fractal(
     output_array_niter,
     output_array_z2,
+    output_array_der2,
     output_array_k,
     output_array_rgb,
     WINDOW_SIZE,
@@ -241,7 +252,7 @@ def compute_fractal(
     juliaxy: type_math_complex,
     k_mode: type_enum_int,
     palette_mode: type_enum_int,
-    custom_palette:List[type_color_int],
+    custom_palette: List[type_color_int],
     color_waves: type_math_int,
     recalc_fractal: bool = True,
     recalc_color: bool = False,
@@ -255,6 +266,7 @@ def compute_fractal(
         # Copy host array to device
         device_array_niter = cuda_copy_to_device(output_array_niter)
         device_array_z2 = cuda_copy_to_device(output_array_z2)
+        device_array_der2 = cuda_copy_to_device(output_array_der2)
         device_array_k = cuda_copy_to_device(output_array_k)
         device_array_rgb = cuda_copy_to_device(output_array_rgb)
         device_array_palette = cuda_copy_to_device(custom_palette)
@@ -269,8 +281,7 @@ def compute_fractal(
             fractal_kernel[blockspergrid, threadsperblock](
                 device_array_niter,
                 device_array_z2,
-                device_array_k,
-                device_array_rgb,
+                device_array_der2,
                 topleft,
                 xstep,
                 ystep,
@@ -280,64 +291,69 @@ def compute_fractal(
                 escape_radius,
                 epsilon,
                 juliaxy,
-                k_mode,
-                palette_mode,device_array_palette,
-                color_waves,
             )
-        elif recalc_color:
+            # compute min/max of niter and z2, so palette step can set k based on min/max niter of current image
+            niter_min, niter_max, z2_min, z2_max, der2_min, der2_max  = compute_min_max_cuda(
+                output_array_niter, output_array_z2, output_array_der2
+            )
+        if recalc_fractal or recalc_color:
             # color is calculated with fractal when it's called, but can be called by itself
             color_kernel[blockspergrid, threadsperblock](
                 device_array_niter,
                 device_array_z2,
+                device_array_der2,
                 device_array_k,
                 device_array_rgb,
+                niter_min, niter_max, z2_min, z2_max,  der2_min, der2_max,
                 max_iterations,
                 escape_radius,
                 k_mode,
-                palette_mode,device_array_palette,
+                palette_mode,
+                device_array_palette,
                 color_waves,
             )
         # copy arrays back to host
         output_array_niter = cuda_copy_to_host(device_array_niter)
         output_array_z2 = cuda_copy_to_host(device_array_z2)
+        output_array_der2 = cuda_copy_to_host(device_array_der2)
         output_array_k = cuda_copy_to_host(device_array_k)
         output_array_rgb = cuda_copy_to_host(device_array_rgb)
     else:  # No cuda
         if recalc_fractal:
-            output_array_niter, output_array_z2, output_array_k, output_array_rgb = (
-                fractal_cpu(
-                    output_array_niter,
-                    output_array_z2,
-                    output_array_k,
-                    output_array_rgb,
-                    topleft,
-                    xstep,
-                    ystep,
-                    fractalmode,
-                    max_iterations,
-                    power,
-                    escape_radius,
-                    epsilon,
-                    juliaxy,
-                    k_mode,
-                    palette_mode,custom_palette,
-                    color_waves,
-                )
+            output_array_niter, output_array_z2, output_array_der2 = fractal_cpu(
+                output_array_niter,
+                output_array_z2,
+                output_array_der2,
+                topleft,
+                xstep,
+                ystep,
+                fractalmode,
+                max_iterations,
+                power,
+                escape_radius,
+                epsilon,
+                juliaxy,
             )
-        elif recalc_color:
+            # compute min/max of niter and z2, so palette step can set k based on min/max niter of current image
+            niter_min, niter_max, z2_min, z2_max, der2_min, der2_max  = compute_min_max_cpu(
+                output_array_niter, output_array_z2, output_array_der2
+            )
+        if recalc_fractal or recalc_color:
             # color is calculated with fractal when it's called, but can be called by itself
             output_array_niter, output_array_z2, output_array_k, output_array_rgb = (
                 color_cpu(
                     output_array_niter,
-                    output_array_z2,
+                    output_array_z2,output_array_der2,
                     output_array_k,
                     output_array_rgb,
+                    niter_min, niter_max, z2_min, z2_max,  der2_min, der2_max,
                     max_iterations,
                     escape_radius,
                     k_mode,
-                    palette_mode,custom_palette,
+                    palette_mode,
+                    custom_palette,
                     color_waves,
                 )
             )
     print(f"Frame calculated in {(default_timer() - timerstart)}s")
-    return output_array_niter, output_array_z2, output_array_k, output_array_rgb
+    return output_array_niter, output_array_z2, output_array_der2, output_array_k, output_array_rgb
