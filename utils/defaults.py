@@ -4,7 +4,7 @@ from utils.types import (
     type_math_int,
     type_enum_int,
 )
-from fractal.colors import K_Mode, Palette_Mode
+from fractal.colors import Normalization_Mode, Palette_Mode
 from fractal.fractal import Fractal_Mode
 from fractal.palette import palettes_definitions
 
@@ -25,10 +25,10 @@ juliaxy = type_math_complex(0 + 0j)
 
 # color variables
 palette_mode = type_enum_int(Palette_Mode.HUE)
-k_mode = type_enum_int(K_Mode.ITER_WAVES)
-color_waves = type_math_int(2)
+normalization_mode = type_enum_int(Normalization_Mode.ITER_NORMALIZED)
+palette_width = type_math_float(1.0)
+palette_shift = type_math_float(0.0)
 custom_palette_name = list(palettes_definitions.keys())[0]
-palette_shift = type_math_int(0)
 
 # UI variables
 show_info = True

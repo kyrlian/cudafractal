@@ -97,11 +97,8 @@ def fractal_kernel(
         device_array_z2[x, y] = z2
         device_array_der2[x, y] = der2
 
-def compute_min_max_cuda(
-    output_array_niter,
-    output_array_z2,
-    output_array_der2
-):
+
+def compute_min_max_cuda(output_array_niter, output_array_z2, output_array_der2):
     # TODO: optimize this function using cuda
     niter_min = niter_max = output_array_niter[0][0]
     z2_min = z2_max = output_array_z2[0][0]
@@ -120,7 +117,7 @@ def compute_min_max_cuda(
                 der2_min = output_array_der2[x][y]
             if der2_max < output_array_der2[x][y]:
                 der2_max = output_array_der2[x][y]
-    return niter_min, niter_max, z2_min, z2_max,  der2_min, der2_max 
+    return niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
 
 
 def fractal_cpu(
@@ -215,7 +212,7 @@ def compute_min_max_cpu(
                 der2_min = output_array_der2[x][y]
             if der2_max < output_array_der2[x][y]:
                 der2_max = output_array_der2[x][y]
-    return niter_min, niter_max, z2_min, z2_max,  der2_min, der2_max 
+    return niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
 
 
 def init_arrays(WINDOW_SIZE):
@@ -230,13 +227,29 @@ def init_arrays(WINDOW_SIZE):
     output_array_der2 = cuda_copy_to_host(device_array_der2)
     output_array_k = cuda_copy_to_host(device_array_k)
     output_array_rgb = cuda_copy_to_host(device_array_rgb)
-    return output_array_niter, output_array_z2, output_array_der2, output_array_k, output_array_rgb
+    return (
+        output_array_niter,
+        output_array_z2,
+        output_array_der2,
+        output_array_k,
+        output_array_rgb,
+    )
+
+
+# TODO create a fractal class to hold runtime info like  niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
+# methods: init, recalc, recolor
 
 
 def compute_fractal(
     output_array_niter,
+    niter_min,
+    niter_max,
     output_array_z2,
+    z2_min,
+    z2_max,
     output_array_der2,
+    der2_min,
+    der2_max,
     output_array_k,
     output_array_rgb,
     WINDOW_SIZE,
@@ -250,10 +263,11 @@ def compute_fractal(
     escape_radius: type_math_int,
     epsilon: type_math_float,
     juliaxy: type_math_complex,
-    k_mode: type_enum_int,
+    normalization_mode: type_enum_int,
     palette_mode: type_enum_int,
     custom_palette: List[type_color_int],
-    color_waves: type_math_int,
+    palette_width: type_math_float,
+    palette_shift: type_math_float,
     recalc_fractal: bool = True,
     recalc_color: bool = False,
 ):
@@ -293,8 +307,10 @@ def compute_fractal(
                 juliaxy,
             )
             # compute min/max of niter and z2, so palette step can set k based on min/max niter of current image
-            niter_min, niter_max, z2_min, z2_max, der2_min, der2_max  = compute_min_max_cuda(
-                output_array_niter, output_array_z2, output_array_der2
+            niter_min, niter_max, z2_min, z2_max, der2_min, der2_max = (
+                compute_min_max_cuda(
+                    output_array_niter, output_array_z2, output_array_der2
+                )
             )
         if recalc_fractal or recalc_color:
             # color is calculated with fractal when it's called, but can be called by itself
@@ -304,13 +320,19 @@ def compute_fractal(
                 device_array_der2,
                 device_array_k,
                 device_array_rgb,
-                niter_min, niter_max, z2_min, z2_max,  der2_min, der2_max,
+                niter_min,
+                niter_max,
+                z2_min,
+                z2_max,
+                der2_min,
+                der2_max,
                 max_iterations,
                 escape_radius,
-                k_mode,
+                normalization_mode,
                 palette_mode,
                 device_array_palette,
-                color_waves,
+                palette_width,
+                palette_shift,
             )
         # copy arrays back to host
         output_array_niter = cuda_copy_to_host(device_array_niter)
@@ -335,25 +357,44 @@ def compute_fractal(
                 juliaxy,
             )
             # compute min/max of niter and z2, so palette step can set k based on min/max niter of current image
-            niter_min, niter_max, z2_min, z2_max, der2_min, der2_max  = compute_min_max_cpu(
-                output_array_niter, output_array_z2, output_array_der2
+            niter_min, niter_max, z2_min, z2_max, der2_min, der2_max = (
+                compute_min_max_cpu(
+                    output_array_niter, output_array_z2, output_array_der2
+                )
             )
         if recalc_fractal or recalc_color:
             # color is calculated with fractal when it's called, but can be called by itself
-            output_array_niter, output_array_z2, output_array_k, output_array_rgb = (
-                color_cpu(
-                    output_array_niter,
-                    output_array_z2,output_array_der2,
-                    output_array_k,
-                    output_array_rgb,
-                    niter_min, niter_max, z2_min, z2_max,  der2_min, der2_max,
-                    max_iterations,
-                    escape_radius,
-                    k_mode,
-                    palette_mode,
-                    custom_palette,
-                    color_waves,
-                )
+            output_array_k, output_array_rgb = color_cpu(
+                output_array_niter,
+                output_array_z2,
+                output_array_der2,
+                output_array_k,
+                output_array_rgb,
+                niter_min,
+                niter_max,
+                z2_min,
+                z2_max,
+                der2_min,
+                der2_max,
+                max_iterations,
+                escape_radius,
+                normalization_mode,
+                palette_mode,
+                custom_palette,
+                palette_width,
+                palette_shift,
             )
     print(f"Frame calculated in {(default_timer() - timerstart)}s")
-    return output_array_niter, output_array_z2, output_array_der2, output_array_k, output_array_rgb
+    return (
+        output_array_niter,
+        niter_min,
+        niter_max,
+        output_array_z2,
+        z2_min,
+        z2_max,
+        output_array_der2,
+        der2_min,
+        der2_max,
+        output_array_k,
+        output_array_rgb,
+    )

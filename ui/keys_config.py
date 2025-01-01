@@ -22,11 +22,12 @@ key_power = pygame.K_p
 key_julia = pygame.K_j
 
 # colors
-key_k_mode = pygame.K_k
-key_color_mode = pygame.K_c
+key_normalization_mode = pygame.K_n
+key_palette_mode = pygame.K_c
 key_color_palette = pygame.K_v
 key_palette_shift = pygame.K_b
-key_color_waves = pygame.K_w
+# key_color_waves = pygame.K_w
+key_palette_width = pygame.K_w
 
 # modifiers
 key_shift = pygame.K_LSHIFT

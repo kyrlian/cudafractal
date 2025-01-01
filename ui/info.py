@@ -1,6 +1,6 @@
 import pygame
 import pygame.freetype as ft
-from fractal.colors import K_Mode, Palette_Mode
+from fractal.colors import Normalization_Mode, Palette_Mode
 from fractal.fractal import Fractal_Mode
 from ui.keys_config import (
     key_shift,
@@ -17,10 +17,11 @@ from ui.keys_config import (
     key_epsilon,
     key_power,
     key_julia,
-    key_k_mode,
-    key_color_mode,
-    key_color_palette,key_palette_shift,
-    key_color_waves,
+    key_normalization_mode,
+    key_palette_mode,
+    key_color_palette,
+    key_palette_shift,
+    key_palette_width,
     key_reset,
     key_help,
     key_display_info,
@@ -28,12 +29,13 @@ from ui.keys_config import (
 from pygame.key import name as key_name
 from utils import defaults
 
+
 def print_info(
     appstate,
     screen_surface,
-    ni=None,
-    z2=None,
-    der2=None,
+    ni=None,niter_min=None, niter_max=None, 
+    z2=None,z2_min=None, z2_max=None,
+    der2=None, der2_min=None, der2_max=None,
     k=None,
     rgb=None,
     bgcolor=pygame.Color("white"),
@@ -44,11 +46,11 @@ def print_info(
     line_spacing = 5
     lines = appstate.get_info()
     if ni is not None:
-        lines.append(f"niter: {ni}")
+        lines.append(f"niter: {ni} ({niter_min}-{niter_max})")
     if z2 is not None:
-        lines.append(f"z2: {z2}")
+        lines.append(f"z2: {z2} ({z2_min}-{z2_max})")
     if der2 is not None:
-        lines.append(f"der2: {der2}")
+        lines.append(f"der2: {der2} ({der2_min}-{der2_max})")
     if k is not None:
         lines.append(f"k: {k}")
     if rgb is not None:
@@ -87,19 +89,39 @@ def print_help(appstate):
     print("    key(s): role, (default, current)")
     print(f"    {key_name(key_zoom)}, left click: zoom in")
     print(f"    {key_name(key_shift)}+{key_name(key_zoom)}, right click: zoom out")
-    print(f"    {key_name(key_pan_up)}, {key_name(key_pan_down)}, {key_name(key_pan_left)}, {key_name(key_pan_right)}: pan")
-    k_mode_name = K_Mode(appstate.k_mode).name
-    print(f"    {key_name(key_k_mode)}: k mode ({defaults.k_mode}, {appstate.k_mode}:{k_mode_name})")
+    print(
+        f"    {key_name(key_pan_up)}, {key_name(key_pan_down)}, {key_name(key_pan_left)}, {key_name(key_pan_right)}: pan"
+    )
+    normalization_mode_name = Normalization_Mode(appstate.normalization_mode).name
+    print(
+        f"    {key_name(key_normalization_mode)}: normalization mode ({defaults.normalization_mode}, {appstate.normalization_mode}:{normalization_mode_name})"
+    )
     palette_mode_name = Palette_Mode(appstate.palette_mode).name
-    print(f"    {key_name(key_color_mode)}: palette mode ({defaults.palette_mode}, {appstate.palette_mode}:{palette_mode_name})")
-    print(f"    {key_name(key_color_palette)}: custom palette ({appstate.custom_palette_name})")
-    print(f"    {key_name(key_palette_shift)}: palette shift ({appstate.palette_shift})")
-    print(f"    {key_name(key_color_waves)}: color waves ({defaults.color_waves}, {appstate.color_waves})")
-    print(f"    {key_name(key_iter)}: max iterations ({defaults.max_iterations}, {appstate.max_iterations})")
+    print(
+        f"    {key_name(key_palette_mode)}: palette mode ({defaults.palette_mode}, {appstate.palette_mode}:{palette_mode_name})"
+    )
+    print(
+        f"    {key_name(key_color_palette)}: custom palette ({appstate.custom_palette_name})"
+    )
+    print(
+        f"    {key_name(key_palette_shift)}: palette shift ({defaults.palette_shift}, {appstate.palette_shift})"
+    )
+    print(
+        f"    {key_name(key_palette_width)}: palette width ({defaults.palette_width}, {appstate.palette_width})"
+    )
+    print(
+        f"    {key_name(key_iter)}: max iterations ({defaults.max_iterations}, {appstate.max_iterations})"
+    )
     print(f"    {key_name(key_power)}: power({defaults.power}, {appstate.power})")
-    print(f"    {key_name(key_escape_radius)}: escape radius({defaults.escape_radius}, {appstate.escape_radius})")
-    print(f"    {key_name(key_epsilon)}: epsilon ({defaults.epsilon}, {appstate.epsilon})")
-    print(f"    {key_name(key_epsilon_reset)}: epsilon=0 {defaults.epsilon}, {appstate.epsilon})")
+    print(
+        f"    {key_name(key_escape_radius)}: escape radius({defaults.escape_radius}, {appstate.escape_radius})"
+    )
+    print(
+        f"    {key_name(key_epsilon)}: epsilon ({defaults.epsilon}, {appstate.epsilon})"
+    )
+    print(
+        f"    {key_name(key_epsilon_reset)}: epsilon=0 {defaults.epsilon}, {appstate.epsilon})"
+    )
     fractal_mode_name = Fractal_Mode(appstate.fractal_mode).name
     print(
         f"    {key_name(key_julia)}: middle click: julia/mandelbrot ({defaults.fractal_mode}, {appstate.fractal_mode}:{fractal_mode_name})"

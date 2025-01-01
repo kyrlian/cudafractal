@@ -6,12 +6,36 @@ from utils.types import (
     type_math_int,
     type_enum_int,
 )
-from fractal.colors import K_Mode, Palette_Mode
+from fractal.colors import Normalization_Mode, Palette_Mode
 from fractal.fractal import Fractal_Mode
 from fractal.palette import palettes_definitions
 from utils import defaults
 from utils import const
-
+from ui.keys_config import (
+    key_shift,
+    key_quit,
+    key_zoom,
+    key_screenshot,
+    key_pan_up,
+    key_pan_down,
+    key_pan_left,
+    key_pan_right,
+    key_iter,
+    key_escape_radius,
+    key_epsilon_reset,
+    key_epsilon,
+    key_power,
+    key_julia,
+    key_normalization_mode,
+    key_palette_mode,
+    key_color_palette,
+    key_palette_shift,
+    key_palette_width,
+    key_reset,
+    key_help,
+    key_display_info,
+)
+from pygame.key import name as key_name
 
 @dataclass
 class AppState:
@@ -30,10 +54,10 @@ class AppState:
 
         # color variables
         self.palette_mode = defaults.palette_mode
-        self.k_mode = defaults.k_mode
-        self.color_waves = defaults.color_waves
-        self.custom_palette_name = defaults.custom_palette_name
+        self.normalization_mode = defaults.normalization_mode
+        self.palette_width = defaults.palette_width
         self.palette_shift = defaults.palette_shift
+        self.custom_palette_name = defaults.custom_palette_name
 
         # UI variables
         self.show_info = defaults.show_info
@@ -73,9 +97,9 @@ class AppState:
             f"Zoom {mouseX},{mouseY}, ({self.xcenter},{self.ycenter}), factor {zoom_rate}"
         )
 
-    def change_k_mode(self):
-        self.k_mode = (self.k_mode + 1) % len(K_Mode)
-        print(f"K mode: {self.k_mode}:  {K_Mode(self.k_mode).name}")
+    def change_normalization_mode(self):
+        self.normalization_mode = (self.normalization_mode + 1) % len(Normalization_Mode)
+        print(f"Normalization mode: {self.normalization_mode}:  {Normalization_Mode(self.normalization_mode).name}")
 
     def change_color_palette_mode(self):
         self.palette_mode = (self.palette_mode + 1) % len(Palette_Mode)
@@ -99,11 +123,9 @@ class AppState:
         self.palette_shift = type_math_int(0)
         print(f"Palette shift: {self.palette_shift}")
 
-    def change_color_waves(self, plusminus):
-        self.color_waves = self.color_waves + plusminus
-        if self.color_waves == 0:
-            self.color_waves = 1
-        print(f"Color waves: {self.color_waves}")
+    def change_palette_width(self, factor):
+        self.max_iterations = int(self.palette_width * factor)
+        print(f"Palette width: {self.palette_width}")
 
     def change_max_iterations(self, factor):
         self.max_iterations = int(self.max_iterations * factor)
@@ -153,19 +175,19 @@ class AppState:
 
     def get_info(self):
         info_list = []
-        info_list.append(f"fractal mode: {Fractal_Mode(self.fractal_mode).name}")
+        info_list.append(f"{key_name(key_julia)}: fractal mode: {Fractal_Mode(self.fractal_mode).name}")
         info_list.append(f"x: {self.xmin} - {self.xmax}")
         info_list.append(f"y: {self.ymin} - {self.ymax}")
-        info_list.append(f"K mode: {K_Mode(self.k_mode).name}")
-        info_list.append(f"palette mode: {Palette_Mode(self.palette_mode).name}")
+        info_list.append(f"{key_name(key_normalization_mode)}: normalization mode: {Normalization_Mode(self.normalization_mode).name}")
+        info_list.append(f"{key_name(key_palette_mode)}: palette mode: {Palette_Mode(self.palette_mode).name}")
         if self.palette_mode == Palette_Mode.CUSTOM:
-            info_list.append(f"palette name: {self.custom_palette_name}")
-            info_list.append(f"palette shift: {self.palette_shift}")
-        info_list.append(f"color waves: {self.color_waves}")
-        info_list.append(f"max iterations: {self.max_iterations}")
-        info_list.append(f"power: {self.power}")
-        info_list.append(f"escape radius: {self.escape_radius}")
-        info_list.append(f"epsilon: {self.epsilon}")
+            info_list.append(f"{key_name(key_color_palette)}: palette name: {self.custom_palette_name}")
+            info_list.append(f"{key_name(key_palette_shift)}: palette shift: {self.palette_shift}")
+        info_list.append(f"{key_name(key_palette_width)}: palette width: {self.palette_width}")
+        info_list.append(f"{key_name(key_iter)}: max iterations: {self.max_iterations}")
+        info_list.append(f"{key_name(key_power)}: power: {self.power}")
+        info_list.append(f"{key_name(key_escape_radius)}: escape radius: {self.escape_radius}")
+        info_list.append(f"{key_name(key_epsilon)}: epsilon: {self.epsilon}")
         return info_list
 
     def get_info_table(self):
@@ -175,11 +197,11 @@ class AppState:
         info_table["xmax"] = self.xmax
         info_table["ymin"] = self.ymin
         info_table["ymax"] = self.ymax
-        info_table["k_mode"] = self.k_mode
+        info_table["normalization_mode"] = self.normalization_mode
         info_table["palette_mode"] = self.palette_mode
         info_table["custom_palette_name"] = self.custom_palette_name
         info_table["palette_shift"] = self.palette_shift
-        info_table["color_waves"] = self.color_waves
+        info_table["palette_width"] = self.palette_width
         info_table["max_iterations"] = self.max_iterations
         info_table["power"] = self.power
         info_table["escape_radius"] = self.escape_radius
@@ -210,8 +232,8 @@ class AppState:
         self.ymax = type_math_float(
             self.get_info_table_value(info_table, "ymax", defaults.ymax)
         )
-        self.k_mode = type_enum_int(
-            self.get_info_table_value(info_table, "k_mode", defaults.k_mode)
+        self.normalization_mode = type_enum_int(
+            self.get_info_table_value(info_table, "normalization_mode", defaults.normalization_mode)
         )
         self.palette_mode = type_enum_int(
             self.get_info_table_value(info_table, "palette_mode", defaults.palette_mode)
@@ -219,13 +241,13 @@ class AppState:
         self.custom_palette_name = self.get_info_table_value(
             info_table, "custom_palette_name", defaults.custom_palette_name
         )
-        self.palette_shift = type_math_int(
+        self.palette_shift = type_math_float(
             self.get_info_table_value(
                 info_table, "palette_shift", defaults.palette_shift
             )
         )
-        self.color_waves = type_math_int(
-            self.get_info_table_value(info_table, "color_waves", defaults.color_waves)
+        self.palette_width = type_math_float(
+            self.get_info_table_value(info_table, "palette_width", defaults.palette_width)
         )
         self.max_iterations = type_math_int(
             self.get_info_table_value(

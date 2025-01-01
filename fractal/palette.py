@@ -65,13 +65,13 @@ def prepare_palettes(
     print(f"Palettes calculated in {(default_timer() - timerstart)}s")
     return computed_palettes
 
-def palette_shift(palette: List[type_color_int], shift_dir: int) -> List[type_color_int]:
-    palette_len = len(palette)
-    new_palette = []
-    for i in range(palette_len):
-        color = palette[(i + shift_dir) % palette_len]
-        new_palette.append(color)
-    return new_palette
+# def palette_shift(palette: List[type_color_int], shift_dir: int) -> List[type_color_int]:
+#     palette_len = len(palette)
+#     new_palette = []
+#     for i in range(palette_len):
+#         color = palette[(i + shift_dir) % palette_len]
+#         new_palette.append(color)
+#     return new_palette
 
 
 def get_computed_palette(computed_palettes, name:str)->List[type_color_int]:

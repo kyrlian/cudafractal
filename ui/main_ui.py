@@ -11,7 +11,6 @@ from fractal.palette import (
     prepare_palettes,
     palettes_definitions,
     get_computed_palette,
-    palette_shift,
 )
 from ui.keys_config import (
     key_shift,
@@ -29,11 +28,11 @@ from ui.keys_config import (
     key_epsilon,
     key_power,
     key_julia,
-    key_k_mode,
-    key_color_mode,
+    key_normalization_mode,
+    key_palette_mode,
     key_color_palette,
     key_palette_shift,
-    key_color_waves,
+    key_palette_width,
     key_reset,
     key_help,
     key_display_info,
@@ -48,33 +47,50 @@ def pygamemain(src_image=None):
         screen_surface,
         appstate,
         output_array_niter,
+        niter_min,
+        niter_max,
         output_array_z2,
+        z2_min,
+        z2_max,
         output_array_der2,
+        der2_min,
+        der2_max,
         output_array_k,
         output_array_rgb,
         recalc_fractal=True,
-        recalc_color=False,
+        recalc_color=True,
     ):
         appstate.recalc_size()
         if appstate.palette_mode == Palette_Mode.CUSTOM:
-            # Get custom palette and shift it
+            # Get custom palette
             custom_palette = get_computed_palette(
                 computed_palettes, appstate.custom_palette_name
             )
-            shifted_palette = palette_shift(custom_palette, appstate.palette_shift)
         else:
-            shifted_palette = []
+            custom_palette = []
         # Compute fractal
         (
             output_array_niter,
+            niter_min,
+            niter_max,
             output_array_z2,
+            z2_min,
+            z2_max,
             output_array_der2,
+            der2_min,
+            der2_max,
             output_array_k,
             output_array_rgb,
         ) = compute_fractal(
             output_array_niter,
+            niter_min,
+            niter_max,
             output_array_z2,
+            z2_min,
+            z2_max,
             output_array_der2,
+            der2_min,
+            der2_max,
             output_array_k,
             output_array_rgb,
             appstate.WINDOW_SIZE,
@@ -88,10 +104,11 @@ def pygamemain(src_image=None):
             appstate.escape_radius,
             appstate.epsilon,
             appstate.juliaxy,
-            appstate.k_mode,
+            appstate.normalization_mode,
             appstate.palette_mode,
-            shifted_palette,
-            appstate.color_waves,
+            custom_palette,
+            appstate.palette_width,
+            appstate.palette_shift,
             recalc_fractal,
             recalc_color,
         )
@@ -101,8 +118,14 @@ def pygamemain(src_image=None):
         pygame.display.flip()
         return (
             output_array_niter,
+            niter_min,
+            niter_max,
             output_array_z2,
+            z2_min,
+            z2_max,
             output_array_der2,
+            der2_min,
+            der2_max,
             output_array_k,
             output_array_rgb,
         )
@@ -118,6 +141,7 @@ def pygamemain(src_image=None):
     screen_surface = pygame.display.set_mode(appstate.WINDOW_SIZE, pygame.HWSURFACE)
     print_help(appstate)
     # Init palettes
+    # TODO: add a specific "palette_steps" parameter instead of max iterations
     computed_palettes = prepare_palettes(palettes_definitions, appstate.max_iterations)
     # init matrices
     (
@@ -130,20 +154,32 @@ def pygamemain(src_image=None):
     # Initial draw
     (
         output_array_niter,
+        niter_min,
+        niter_max,
         output_array_z2,
+        z2_min,
+        z2_max,
         output_array_der2,
+        der2_min,
+        der2_max,
         output_array_k,
         output_array_rgb,
     ) = redraw(
         screen_surface,
         appstate,
         output_array_niter,
+        0,
+        0,
         output_array_z2,
+        0,
+        0,
         output_array_der2,
+        0,
+        0,
         output_array_k,
         output_array_rgb,
         True,
-        False,
+        True,
     )
     # Run the game loop
     running = True
@@ -190,6 +226,7 @@ def pygamemain(src_image=None):
                     else:
                         appstate.change_max_iterations(1.1)
                     # Recompute palettes
+                    # TODO: add a specific "palette_steps" parameter instead of max iterations
                     computed_palettes = prepare_palettes(
                         palettes_definitions, appstate.max_iterations
                     )
@@ -218,10 +255,10 @@ def pygamemain(src_image=None):
                 elif event.key == key_julia:
                     appstate.change_fractal_mode(pygame.mouse.get_pos())
                     recalc_fractal = True
-                elif event.key == key_k_mode:
-                    appstate.change_k_mode()
+                elif event.key == key_normalization_mode:
+                    appstate.change_normalization_mode()
                     recalc_color = True
-                elif event.key == key_color_mode:
+                elif event.key == key_palette_mode:
                     appstate.change_color_palette_mode()
                     recalc_color = True
                 elif event.key == key_color_palette:
@@ -229,18 +266,19 @@ def pygamemain(src_image=None):
                     appstate.reset_palette_shift()
                     recalc_color = True
                 elif event.key == key_palette_shift:
-                    step = direction = 1
+                    step = 0.01
+                    direction = 1
                     if ctrl:
-                        step = 10
+                        step = 0.1
                     if shift:
                         direction = -1
                     appstate.change_palette_shift(step * direction)
                     recalc_color = True
-                elif event.key == key_color_waves:
+                elif event.key == key_palette_width:
                     if shift:
-                        appstate.change_color_waves(-1)
+                        appstate.change_palette_width(1.1)
                     else:
-                        appstate.change_color_waves(1)
+                        appstate.change_palette_width(0.9)
                     recalc_color = True
                 elif event.key == key_reset:
                     appstate.reset()
@@ -266,20 +304,46 @@ def pygamemain(src_image=None):
                 der2 = output_array_der2[mx, my]
                 k = output_array_k[mx, my]
                 rgb = output_array_rgb[mx, my]
-                print_info(appstate, screen_surface, ni, z2, der2, k, rgb)
+                print_info(
+                    appstate,
+                    screen_surface,
+                    ni,
+                    niter_min,
+                    niter_max,
+                    z2,
+                    z2_min,
+                    z2_max,
+                    der2,
+                    der2_min,
+                    der2_max,
+                    k,
+                    rgb,
+                )
             if recalc_fractal or recalc_color:
                 (
                     output_array_niter,
+                    niter_min,
+                    niter_max,
                     output_array_z2,
+                    z2_min,
+                    z2_max,
                     output_array_der2,
+                    der2_min,
+                    der2_max,
                     output_array_k,
                     output_array_rgb,
                 ) = redraw(
                     screen_surface,
                     appstate,
                     output_array_niter,
+                    niter_min,
+                    niter_max,
                     output_array_z2,
+                    z2_min,
+                    z2_max,
                     output_array_der2,
+                    der2_min,
+                    der2_max,
                     output_array_k,
                     output_array_rgb,
                     recalc_fractal,

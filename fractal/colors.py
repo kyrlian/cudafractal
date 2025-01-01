@@ -12,9 +12,9 @@ from utils.types import (
 )
 
 
-class K_Mode(IntEnum):
-    ITER_WAVES = 0
-    ITER = 1
+class Normalization_Mode(IntEnum):
+    ITER_NORMALIZED = 0
+    ITER =  1
     LOG_ITER = 2
     R_Z2 = 3
     LOG_R_Z2 = 4
@@ -105,7 +105,7 @@ def compute_color_custom(k: type_math_float) -> type_color_int:
 
 
 @cuda_jit(
-    "(int32, int32, int32, int32, int32, int32, float64, float64, float64, int32, float64, float64, float64, uint8, uint8, uint32[:], int32)",
+    "(int32, int32, int32, int32, int32, int32, float64, float64, float64, int32, float64, float64, float64, uint8, uint8, uint32[:], float64, float64)",
     device=True,
 )
 def color_xy(
@@ -122,52 +122,59 @@ def color_xy(
     der2: type_math_float,
     der2_min: type_math_float,
     der2_max: type_math_float,
-    k_mode: type_enum_int,
+    normalization_mode: type_enum_int,
     palette_mode: type_enum_int,
     custom_palette: List[type_color_int],
-    color_waves: type_math_int,
+    palette_width: type_math_float,
+    palette_shift: type_math_float,
 ) -> Tuple[type_math_float, type_color_int]:
-    # TODO use min/max of nb_iter and z2, so palette step can set k based on min/max niter of current image
     # calculate k[0-1] based on k mode
-    k = type_math_float(0.0)
+    normalized_k = type_math_float(0.0)
     if z2 > escape_radius:
-        match k_mode:
-            case K_Mode.ITER_WAVES:
-                iter_by_wave = max_iterations / color_waves
-                k = type_math_float((nb_iter % iter_by_wave) / iter_by_wave)
-            case K_Mode.ITER:
-                k = type_math_float(nb_iter / max_iterations)
-            case K_Mode.LOG_ITER:
-                k = log(type_math_float(nb_iter)) / log(type_math_float(max_iterations))
-            case K_Mode.R_Z2:
+        match normalization_mode:
+            case Normalization_Mode.ITER_NORMALIZED:
+                # use min/max of nb_iter so k is based on min/max niter of current image
+                normalized_iter = (nb_iter - niter_min) / (niter_max - niter_min)  # 0-1
+                normalized_k = type_math_float(normalized_iter)
+            case Normalization_Mode.ITER:
+                normalized_k = type_math_float(nb_iter / max_iterations)
+            case Normalization_Mode.LOG_ITER:
+                normalized_k = log(type_math_float(nb_iter)) / log(
+                    type_math_float(max_iterations)
+                )
+            case Normalization_Mode.R_Z2:
                 # https://www.math.univ-toulouse.fr/~cheritat/wiki-draw/index.php/Mandelbrot_set
                 # TODO : z2 is slightly bigger than r, so k doesnt cover 0-1
-                k = type_math_float(escape_radius) / type_math_float(z2)
-            case K_Mode.LOG_R_Z2:
-                k = log(type_math_float(escape_radius)) / log(type_math_float(z2))
-            case K_Mode.INV_Z2:
+                normalized_k = type_math_float(escape_radius) / type_math_float(z2)
+            case Normalization_Mode.LOG_R_Z2:
+                normalized_k = log(type_math_float(escape_radius)) / log(
+                    type_math_float(z2)
+                )
+            case Normalization_Mode.INV_Z2:
                 # k = math.sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
                 # k = sin(log(z2)) / 2 + 0.5 # CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES, sin table too big ?
-                k = 1 / z2
+                normalized_k = 1 / z2
+    # apply palette width and shift
+    shifted_k = ((normalized_k + palette_shift) / palette_width) % 1
     # calculate color from k
     match palette_mode:
         case Palette_Mode.HUE:
-            if k == float(0.0):
+            if shifted_k == float(0.0):
                 packedrgb = rgb_to_packed(0, 0, 0)
             else:
-                packedrgb = hsv_to_rgb(k, 1, 1)
+                packedrgb = hsv_to_rgb(shifted_k, 1, 1)
         case Palette_Mode.GRAYSCALE:
-            kk = int(k * 255)
-            packedrgb = rgb_to_packed(kk, kk, kk)
+            k255 = int(shifted_k * 255)
+            packedrgb = rgb_to_packed(k255, k255, k255)
         case Palette_Mode.CUSTOM:  # custom palette_mode k to rgb
-            packedrgb = get_palette_color(custom_palette, k)
+            packedrgb = get_palette_color(custom_palette, shifted_k)
         case _:
             packedrgb = rgb_to_packed(255, 0, 0)
-    return k, packedrgb
+    return shifted_k, packedrgb
 
 
 @cuda_jit(
-    "(int32[:,:], float64[:,:], float64[:,:], float64[:,:], int32[:,:], int32, int32, float64, float64, float64, float64, int32, int32, uint8, uint8, uint32[:], int32)"
+    "(int32[:,:], float64[:,:], float64[:,:], float64[:,:], int32[:,:], int32, int32, float64, float64, float64, float64, int32, int32, uint8, uint8, uint32[:], float64, float64)"
 )
 def color_kernel(
     device_array_niter,
@@ -183,10 +190,11 @@ def color_kernel(
     der2_max: type_math_float,
     max_iterations: type_math_int,
     escape_radius: type_math_int,
-    k_mode: type_enum_int,
+    normalization_mode: type_enum_int,
     palette_mode: type_enum_int,
     custom_palette: List[type_color_int],
-    color_waves: type_math_int,
+    palette_width: type_math_float,
+    palette_shift: type_math_float,
 ) -> None:
     x, y = cuda_grid(2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
@@ -207,10 +215,11 @@ def color_kernel(
             der2,
             der2_min,
             der2_max,
-            k_mode,
+            normalization_mode,
             palette_mode,
             custom_palette,
-            color_waves,
+            palette_width,
+            palette_shift,
         )
         device_array_k[x, y] = k
         device_array_rgb[x, y] = packedrgb
@@ -219,7 +228,7 @@ def color_kernel(
 def color_cpu(
     output_array_niter,
     output_array_z2,
-    device_array_der2,
+    output_array_der2,
     output_array_k,
     output_array_rgb,
     niter_min: type_math_int,
@@ -230,16 +239,18 @@ def color_cpu(
     der2_max: type_math_float,
     max_iterations: type_math_int,
     escape_radius: type_math_int,
-    k_mode: type_enum_int,
+    normalization_mode: type_enum_int,
     palette_mode: type_enum_int,
     custom_palette: List[type_color_int],
-    color_waves: type_math_int,
+    palette_width: type_math_float,
+    palette_shift: type_math_float,
 ):
     # NON vectorized version:
     for x in range(output_array_niter.shape[0]):
         for y in range(output_array_niter.shape[1]):
             nb_iter = output_array_niter[x, y]
             z2 = output_array_z2[x, y]
+            der2 = output_array_der2[x, y]
             k, packedrgb = color_xy(
                 x,
                 y,
@@ -254,14 +265,15 @@ def color_cpu(
                 der2,
                 der2_min,
                 der2_max,
-                k_mode,
+                normalization_mode,
                 palette_mode,
                 custom_palette,
-                color_waves,
+                palette_width,
+                palette_shift,
             )
             output_array_k[x, y] = k
             output_array_rgb[x, y] = packedrgb
-    return output_array_niter, output_array_z2, output_array_k, output_array_rgb
+    return output_array_k, output_array_rgb
 
 
 # def build_custom_palette(color_list: List[Color], steps):
