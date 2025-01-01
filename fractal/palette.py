@@ -7,7 +7,7 @@ from utils.types import (
     type_color_int,
     type_color_int_small,
 )
-
+from utils.timer import timing_wrapper
 
 palettes_definitions = {
     "black_red_white": ((0.0, 0, 0, 0), (0.5, 255, 0, 0), (1.0, 255, 255, 255)),
@@ -53,16 +53,16 @@ def prepare_palette(palette_colors, steps: type_math_int) -> List[type_color_int
         computed_palette.append(compute_color(palette_colors, k))
     return computed_palette
 
-
+@timing_wrapper
 def prepare_palettes(
     palettes_defs: dict, steps: type_math_int
 ) -> Dict[str, List[type_color_int]]:
-    print("Precomputing palettes")
-    timerstart = default_timer()
+    # print("Precomputing palettes")
+    # timerstart = default_timer()
     computed_palettes = {}
     for name, palette_def in palettes_defs.items():
         computed_palettes[name]=(prepare_palette(palette_def, steps))
-    print(f"Palettes calculated in {(default_timer() - timerstart)}s")
+    # print(f"Palettes calculated in {(default_timer() - timerstart)}s")
     return computed_palettes
 
 # def palette_shift(palette: List[type_color_int], shift_dir: int) -> List[type_color_int]:

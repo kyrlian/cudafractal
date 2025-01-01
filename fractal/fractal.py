@@ -20,7 +20,7 @@ from utils.cuda import (
     cuda_copy_to_host,
 )
 from fractal.colors import color_kernel, color_cpu
-
+from utils.timer import timing_wrapper
 
 class Fractal_Mode(IntEnum):
     MANDELBROT = 0
@@ -97,7 +97,7 @@ def fractal_kernel(
         device_array_z2[x, y] = z2
         device_array_der2[x, y] = der2
 
-
+@timing_wrapper
 def compute_min_max_cuda(
     device_array_niter,
     device_array_z2,
@@ -128,7 +128,7 @@ def compute_min_max_cuda(
                 der2_max = host_array_der2[x][y]
     return niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
 
-
+@timing_wrapper
 def fractal_cpu(
     host_array_niter,
     host_array_z2,
@@ -197,7 +197,7 @@ def fractal_cpu(
                 host_array_der2[x, y] = der2
     return host_array_niter, host_array_z2, host_array_der2
 
-
+@timing_wrapper
 def compute_min_max_cpu(
     host_array_niter,
     host_array_z2,
@@ -223,7 +223,7 @@ def compute_min_max_cpu(
                 der2_max = host_array_der2[x][y]
     return niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
 
-
+@timing_wrapper
 def init_arrays(WINDOW_SIZE):
     (screenw, screenh) = WINDOW_SIZE
     device_array_niter = init_array(screenw, screenh, type_math_int)
@@ -246,6 +246,7 @@ def init_arrays(WINDOW_SIZE):
 
 
 # TODO read stuff from AppState
+@timing_wrapper
 def compute_fractal(
     host_array_niter,
     niter_min,
@@ -277,7 +278,7 @@ def compute_fractal(
     recalc_fractal: bool = True,
     recalc_color: bool = False,
 ):
-    timerstart = default_timer()
+    # timerstart = default_timer()
     (screenw, screenh) = WINDOW_SIZE
     xstep = abs(xmax - xmin) / screenw
     ystep = abs(ymax - ymin) / screenh
@@ -390,7 +391,7 @@ def compute_fractal(
                 palette_width,
                 palette_shift,
             )
-    print(f"Frame calculated in {(default_timer() - timerstart)}s")
+    # print(f"Frame calculated in {(default_timer() - timerstart)}s")
     return (
         host_array_niter,
         niter_min,

@@ -207,7 +207,7 @@ def pygamemain(src_image=None):
                         appstate.zoom_in()
                     recalc_fractal = True
                 elif event.key == key_screenshot:
-                    screenshot(appstate)
+                    screenshot(screen_surface,appstate)
                 elif event.key == key_pan_up:
                     appstate.pan(0, 1)
                     recalc_fractal = True

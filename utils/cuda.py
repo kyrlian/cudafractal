@@ -26,9 +26,7 @@ try:
         # if we dont care about the ratio mbx/mby :
         mbx = 32
         mby = floor(gpu.MAX_THREADS_PER_BLOCK / mbx)
-        print(
-            f"compute_threadsperblock: MAX_THREADS_PER_BLOCK:{gpu.MAX_THREADS_PER_BLOCK}, mbx: {mbx}, mby: {mby}"
-        )
+        # print(f"compute_threadsperblock: MAX_THREADS_PER_BLOCK:{gpu.MAX_THREADS_PER_BLOCK}, mbx: {mbx}, mby: {mby}")
         return (mbx, mby)
 
     def init_array(dimx, dimy, dtype):

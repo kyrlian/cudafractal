@@ -48,9 +48,9 @@ def print_info(
     if ni is not None:
         lines.append(f"niter: {ni} ({niter_min}-{niter_max})")
     if z2 is not None:
-        lines.append(f"z2: {z2} ({z2_min}-{z2_max})")
+        lines.append(f"z2: {z2:.4f} ({z2_min:.4f}-{z2_max:.4f})")
     if der2 is not None:
-        lines.append(f"der2: {der2} ({der2_min}-{der2_max})")
+        lines.append(f"der2: {der2:.4f} ({der2_min}-{der2_max})")
     if k is not None:
         lines.append(f"k: {k}")
     if rgb is not None:
@@ -85,6 +85,7 @@ def print_info(
 
 def print_help(appstate):
     # uses default values from defaults.py
+    # TODO reuse appState.getInfo()
     print("Help:")
     print("    key(s): role, (default, current)")
     print(f"    {key_name(key_zoom)}, left click: zoom in")

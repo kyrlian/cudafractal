@@ -173,8 +173,8 @@ class AppState:
         info_list.append(f"{key_name(key_palette_mode)}: palette mode: {Palette_Mode(self.palette_mode).name}")
         if self.palette_mode == Palette_Mode.CUSTOM:
             info_list.append(f"{key_name(key_color_palette)}: palette name: {self.custom_palette_name}")
-            info_list.append(f"{key_name(key_palette_shift)}: palette shift: {self.palette_shift}")
         info_list.append(f"{key_name(key_palette_width)}: palette width: {self.palette_width}")
+        info_list.append(f"{key_name(key_palette_shift)}: palette shift: {self.palette_shift}")
         info_list.append(f"{key_name(key_iter)}: max iterations: {self.max_iterations}")
         info_list.append(f"{key_name(key_power)}: power: {self.power}")
         info_list.append(f"{key_name(key_escape_radius)}: escape radius: {self.escape_radius}")
