@@ -98,32 +98,41 @@ def fractal_kernel(
         device_array_der2[x, y] = der2
 
 
-def compute_min_max_cuda(output_array_niter, output_array_z2, output_array_der2):
+def compute_min_max_cuda(
+    device_array_niter,
+    device_array_z2,
+    device_array_der2,
+):
+    # copy arrays back to host
+    host_array_niter = cuda_copy_to_host(device_array_niter)
+    host_array_z2 = cuda_copy_to_host(device_array_z2)
+    host_array_der2 = cuda_copy_to_host(device_array_der2)
     # TODO: optimize this function using cuda
-    niter_min = niter_max = output_array_niter[0][0]
-    z2_min = z2_max = output_array_z2[0][0]
-    der2_min = der2_max = output_array_der2[0][0]
-    for x in range(output_array_niter.shape[0]):
-        for y in range(output_array_niter.shape[1]):
-            if niter_min > output_array_niter[x][y]:
-                niter_min = output_array_niter[x][y]
-            if niter_max < output_array_niter[x][y]:
-                niter_max = output_array_niter[x][y]
-            if z2_min > output_array_z2[x][y]:
-                z2_min = output_array_z2[x][y]
-            if z2_max < output_array_z2[x][y]:
-                z2_max = output_array_z2[x][y]
-            if der2_min > output_array_der2[x][y]:
-                der2_min = output_array_der2[x][y]
-            if der2_max < output_array_der2[x][y]:
-                der2_max = output_array_der2[x][y]
+    # store niter_min, niter_max, z2_min, z2_max, der2_min, der2_max in AppState
+    niter_min = niter_max = host_array_niter[0][0]
+    z2_min = z2_max = host_array_z2[0][0]
+    der2_min = der2_max = host_array_der2[0][0]
+    for x in range(host_array_niter.shape[0]):
+        for y in range(host_array_niter.shape[1]):
+            if niter_min > host_array_niter[x][y]:
+                niter_min = host_array_niter[x][y]
+            if niter_max < host_array_niter[x][y]:
+                niter_max = host_array_niter[x][y]
+            if z2_min > host_array_z2[x][y]:
+                z2_min = host_array_z2[x][y]
+            if z2_max < host_array_z2[x][y]:
+                z2_max = host_array_z2[x][y]
+            if der2_min > host_array_der2[x][y]:
+                der2_min = host_array_der2[x][y]
+            if der2_max < host_array_der2[x][y]:
+                der2_max = host_array_der2[x][y]
     return niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
 
 
 def fractal_cpu(
-    output_array_niter,
-    output_array_z2,
-    output_array_der2,
+    host_array_niter,
+    host_array_z2,
+    host_array_der2,
     topleft: type_math_complex,
     xstep: type_math_float,
     ystep: type_math_float,
@@ -144,10 +153,10 @@ def fractal_cpu(
         # vector_x and vector_y need to be same size, and represent all matrix cells:
         matrix_x = []
         matrix_y = []
-        for x in range(output_array_niter.shape[0]):
+        for x in range(host_array_niter.shape[0]):
             vector_x = []
             vector_y = []
-            for y in range(output_array_niter.shape[1]):
+            for y in range(host_array_niter.shape[1]):
                 vector_x.append(x)
                 vector_y.append(y)
             matrix_x.append(vector_x)
@@ -165,11 +174,11 @@ def fractal_cpu(
             epsilon,
             juliaxy,
         )
-        output_array_niter, output_array_z2, output_array_der2 = result_arrays
+        host_array_niter, host_array_z2, host_array_der2 = result_arrays
     else:
         # NON vectorized version:
-        for x in range(output_array_niter.shape[0]):
-            for y in range(output_array_niter.shape[1]):
+        for x in range(host_array_niter.shape[0]):
+            for y in range(host_array_niter.shape[1]):
                 niter, z2, der2 = fractal_xy(
                     x,
                     y,
@@ -183,35 +192,35 @@ def fractal_cpu(
                     epsilon,
                     juliaxy,
                 )
-                output_array_niter[x, y] = niter
-                output_array_z2[x, y] = z2
-                output_array_der2[x, y] = der2
-    return output_array_niter, output_array_z2, output_array_der2
+                host_array_niter[x, y] = niter
+                host_array_z2[x, y] = z2
+                host_array_der2[x, y] = der2
+    return host_array_niter, host_array_z2, host_array_der2
 
 
 def compute_min_max_cpu(
-    output_array_niter,
-    output_array_z2,
-    output_array_der2,
+    host_array_niter,
+    host_array_z2,
+    host_array_der2,
 ):
     # TODO: optimize this function using numpy
-    niter_min = niter_max = output_array_niter[0][0]
-    z2_min = z2_max = output_array_z2[0][0]
-    der2_min = der2_max = output_array_der2[0][0]
-    for x in range(output_array_niter.shape[0]):
-        for y in range(output_array_niter.shape[1]):
-            if niter_min > output_array_niter[x][y]:
-                niter_min = output_array_niter[x][y]
-            if niter_max < output_array_niter[x][y]:
-                niter_max = output_array_niter[x][y]
-            if z2_min > output_array_z2[x][y]:
-                z2_min = output_array_z2[x][y]
-            if z2_max < output_array_z2[x][y]:
-                z2_max = output_array_z2[x][y]
-            if der2_min > output_array_der2[x][y]:
-                der2_min = output_array_der2[x][y]
-            if der2_max < output_array_der2[x][y]:
-                der2_max = output_array_der2[x][y]
+    niter_min = niter_max = host_array_niter[0][0]
+    z2_min = z2_max = host_array_z2[0][0]
+    der2_min = der2_max = host_array_der2[0][0]
+    for x in range(host_array_niter.shape[0]):
+        for y in range(host_array_niter.shape[1]):
+            if niter_min > host_array_niter[x][y]:
+                niter_min = host_array_niter[x][y]
+            if niter_max < host_array_niter[x][y]:
+                niter_max = host_array_niter[x][y]
+            if z2_min > host_array_z2[x][y]:
+                z2_min = host_array_z2[x][y]
+            if z2_max < host_array_z2[x][y]:
+                z2_max = host_array_z2[x][y]
+            if der2_min > host_array_der2[x][y]:
+                der2_min = host_array_der2[x][y]
+            if der2_max < host_array_der2[x][y]:
+                der2_max = host_array_der2[x][y]
     return niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
 
 
@@ -222,36 +231,33 @@ def init_arrays(WINDOW_SIZE):
     device_array_der2 = init_array(screenw, screenh, type_math_float)
     device_array_k = init_array(screenw, screenh, type_math_float)
     device_array_rgb = init_array(screenw, screenh, type_math_int)
-    output_array_niter = cuda_copy_to_host(device_array_niter)
-    output_array_z2 = cuda_copy_to_host(device_array_z2)
-    output_array_der2 = cuda_copy_to_host(device_array_der2)
-    output_array_k = cuda_copy_to_host(device_array_k)
-    output_array_rgb = cuda_copy_to_host(device_array_rgb)
+    host_array_niter = cuda_copy_to_host(device_array_niter)
+    host_array_z2 = cuda_copy_to_host(device_array_z2)
+    host_array_der2 = cuda_copy_to_host(device_array_der2)
+    host_array_k = cuda_copy_to_host(device_array_k)
+    host_array_rgb = cuda_copy_to_host(device_array_rgb)
     return (
-        output_array_niter,
-        output_array_z2,
-        output_array_der2,
-        output_array_k,
-        output_array_rgb,
+        host_array_niter,
+        host_array_z2,
+        host_array_der2,
+        host_array_k,
+        host_array_rgb,
     )
 
 
-# TODO create a fractal class to hold runtime info like  niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
-# methods: init, recalc, recolor
-
-
+# TODO read stuff from AppState
 def compute_fractal(
-    output_array_niter,
+    host_array_niter,
     niter_min,
     niter_max,
-    output_array_z2,
+    host_array_z2,
     z2_min,
     z2_max,
-    output_array_der2,
+    host_array_der2,
     der2_min,
     der2_max,
-    output_array_k,
-    output_array_rgb,
+    host_array_k,
+    host_array_rgb,
     WINDOW_SIZE,
     xmax: type_math_float,
     xmin: type_math_float,
@@ -278,11 +284,11 @@ def compute_fractal(
     topleft = type_math_complex(xmin + 1j * ymax)
     if cuda_available():
         # Copy host array to device
-        device_array_niter = cuda_copy_to_device(output_array_niter)
-        device_array_z2 = cuda_copy_to_device(output_array_z2)
-        device_array_der2 = cuda_copy_to_device(output_array_der2)
-        device_array_k = cuda_copy_to_device(output_array_k)
-        device_array_rgb = cuda_copy_to_device(output_array_rgb)
+        device_array_niter = cuda_copy_to_device(host_array_niter)
+        device_array_z2 = cuda_copy_to_device(host_array_z2)
+        device_array_der2 = cuda_copy_to_device(host_array_der2)
+        device_array_k = cuda_copy_to_device(host_array_k)
+        device_array_rgb = cuda_copy_to_device(host_array_rgb)
         device_array_palette = cuda_copy_to_device(custom_palette)
         # Compute block and threads
         threadsperblock = compute_threadsperblock(screenw, screenh)
@@ -309,7 +315,9 @@ def compute_fractal(
             # compute min/max of niter and z2, so palette step can set k based on min/max niter of current image
             niter_min, niter_max, z2_min, z2_max, der2_min, der2_max = (
                 compute_min_max_cuda(
-                    output_array_niter, output_array_z2, output_array_der2
+                    device_array_niter,
+                    device_array_z2,
+                    device_array_der2,
                 )
             )
         if recalc_fractal or recalc_color:
@@ -335,17 +343,17 @@ def compute_fractal(
                 palette_shift,
             )
         # copy arrays back to host
-        output_array_niter = cuda_copy_to_host(device_array_niter)
-        output_array_z2 = cuda_copy_to_host(device_array_z2)
-        output_array_der2 = cuda_copy_to_host(device_array_der2)
-        output_array_k = cuda_copy_to_host(device_array_k)
-        output_array_rgb = cuda_copy_to_host(device_array_rgb)
+        host_array_niter = cuda_copy_to_host(device_array_niter)
+        host_array_z2 = cuda_copy_to_host(device_array_z2)
+        host_array_der2 = cuda_copy_to_host(device_array_der2)
+        host_array_k = cuda_copy_to_host(device_array_k)
+        host_array_rgb = cuda_copy_to_host(device_array_rgb)
     else:  # No cuda
         if recalc_fractal:
-            output_array_niter, output_array_z2, output_array_der2 = fractal_cpu(
-                output_array_niter,
-                output_array_z2,
-                output_array_der2,
+            host_array_niter, host_array_z2, host_array_der2 = fractal_cpu(
+                host_array_niter,
+                host_array_z2,
+                host_array_der2,
                 topleft,
                 xstep,
                 ystep,
@@ -358,18 +366,16 @@ def compute_fractal(
             )
             # compute min/max of niter and z2, so palette step can set k based on min/max niter of current image
             niter_min, niter_max, z2_min, z2_max, der2_min, der2_max = (
-                compute_min_max_cpu(
-                    output_array_niter, output_array_z2, output_array_der2
-                )
+                compute_min_max_cpu(host_array_niter, host_array_z2, host_array_der2)
             )
         if recalc_fractal or recalc_color:
             # color is calculated with fractal when it's called, but can be called by itself
-            output_array_k, output_array_rgb = color_cpu(
-                output_array_niter,
-                output_array_z2,
-                output_array_der2,
-                output_array_k,
-                output_array_rgb,
+            host_array_k, host_array_rgb = color_cpu(
+                host_array_niter,
+                host_array_z2,
+                host_array_der2,
+                host_array_k,
+                host_array_rgb,
                 niter_min,
                 niter_max,
                 z2_min,
@@ -386,15 +392,15 @@ def compute_fractal(
             )
     print(f"Frame calculated in {(default_timer() - timerstart)}s")
     return (
-        output_array_niter,
+        host_array_niter,
         niter_min,
         niter_max,
-        output_array_z2,
+        host_array_z2,
         z2_min,
         z2_max,
-        output_array_der2,
+        host_array_der2,
         der2_min,
         der2_max,
-        output_array_k,
-        output_array_rgb,
+        host_array_k,
+        host_array_rgb,
     )

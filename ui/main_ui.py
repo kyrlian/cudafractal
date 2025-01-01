@@ -46,17 +46,17 @@ def pygamemain(src_image=None):
     def redraw(
         screen_surface,
         appstate,
-        output_array_niter,
+        host_array_niter,
         niter_min,
         niter_max,
-        output_array_z2,
+        host_array_z2,
         z2_min,
         z2_max,
-        output_array_der2,
+        host_array_der2,
         der2_min,
         der2_max,
-        output_array_k,
-        output_array_rgb,
+        host_array_k,
+        host_array_rgb,
         recalc_fractal=True,
         recalc_color=True,
     ):
@@ -70,29 +70,29 @@ def pygamemain(src_image=None):
             custom_palette = []
         # Compute fractal
         (
-            output_array_niter,
+            host_array_niter,
             niter_min,
             niter_max,
-            output_array_z2,
+            host_array_z2,
             z2_min,
             z2_max,
-            output_array_der2,
+            host_array_der2,
             der2_min,
             der2_max,
-            output_array_k,
-            output_array_rgb,
+            host_array_k,
+            host_array_rgb,
         ) = compute_fractal(
-            output_array_niter,
+            host_array_niter,
             niter_min,
             niter_max,
-            output_array_z2,
+            host_array_z2,
             z2_min,
             z2_max,
-            output_array_der2,
+            host_array_der2,
             der2_min,
             der2_max,
-            output_array_k,
-            output_array_rgb,
+            host_array_k,
+            host_array_rgb,
             appstate.WINDOW_SIZE,
             appstate.xmax,
             appstate.xmin,
@@ -112,22 +112,22 @@ def pygamemain(src_image=None):
             recalc_fractal,
             recalc_color,
         )
-        pygame.pixelcopy.array_to_surface(screen_surface, output_array_rgb)
+        pygame.pixelcopy.array_to_surface(screen_surface, host_array_rgb)
         if appstate.show_info:
             print_info(appstate, screen_surface)
         pygame.display.flip()
         return (
-            output_array_niter,
+            host_array_niter,
             niter_min,
             niter_max,
-            output_array_z2,
+            host_array_z2,
             z2_min,
             z2_max,
-            output_array_der2,
+            host_array_der2,
             der2_min,
             der2_max,
-            output_array_k,
-            output_array_rgb,
+            host_array_k,
+            host_array_rgb,
         )
 
     # Initialize pygame
@@ -145,39 +145,39 @@ def pygamemain(src_image=None):
     computed_palettes = prepare_palettes(palettes_definitions, appstate.max_iterations)
     # init matrices
     (
-        output_array_niter,
-        output_array_z2,
-        output_array_der2,
-        output_array_k,
-        output_array_rgb,
+        host_array_niter,
+        host_array_z2,
+        host_array_der2,
+        host_array_k,
+        host_array_rgb,
     ) = init_arrays(appstate.WINDOW_SIZE)
     # Initial draw
     (
-        output_array_niter,
+        host_array_niter,
         niter_min,
         niter_max,
-        output_array_z2,
+        host_array_z2,
         z2_min,
         z2_max,
-        output_array_der2,
+        host_array_der2,
         der2_min,
         der2_max,
-        output_array_k,
-        output_array_rgb,
+        host_array_k,
+        host_array_rgb,
     ) = redraw(
         screen_surface,
         appstate,
-        output_array_niter,
+        host_array_niter,
         0,
         0,
-        output_array_z2,
+        host_array_z2,
         0,
         0,
-        output_array_der2,
+        host_array_der2,
         0,
         0,
-        output_array_k,
-        output_array_rgb,
+        host_array_k,
+        host_array_rgb,
         True,
         True,
     )
@@ -299,11 +299,11 @@ def pygamemain(src_image=None):
             elif event.type == pygame.MOUSEMOTION:
                 # show info at cursor (ni, k...)
                 (mx, my) = pygame.mouse.get_pos()
-                ni = output_array_niter[mx, my]
-                z2 = output_array_z2[mx, my]
-                der2 = output_array_der2[mx, my]
-                k = output_array_k[mx, my]
-                rgb = output_array_rgb[mx, my]
+                ni = host_array_niter[mx, my]
+                z2 = host_array_z2[mx, my]
+                der2 = host_array_der2[mx, my]
+                k = host_array_k[mx, my]
+                rgb = host_array_rgb[mx, my]
                 print_info(
                     appstate,
                     screen_surface,
@@ -321,31 +321,31 @@ def pygamemain(src_image=None):
                 )
             if recalc_fractal or recalc_color:
                 (
-                    output_array_niter,
+                    host_array_niter,
                     niter_min,
                     niter_max,
-                    output_array_z2,
+                    host_array_z2,
                     z2_min,
                     z2_max,
-                    output_array_der2,
+                    host_array_der2,
                     der2_min,
                     der2_max,
-                    output_array_k,
-                    output_array_rgb,
+                    host_array_k,
+                    host_array_rgb,
                 ) = redraw(
                     screen_surface,
                     appstate,
-                    output_array_niter,
+                    host_array_niter,
                     niter_min,
                     niter_max,
-                    output_array_z2,
+                    host_array_z2,
                     z2_min,
                     z2_max,
-                    output_array_der2,
+                    host_array_der2,
                     der2_min,
                     der2_max,
-                    output_array_k,
-                    output_array_rgb,
+                    host_array_k,
+                    host_array_rgb,
                     recalc_fractal,
                     recalc_color,
                 )

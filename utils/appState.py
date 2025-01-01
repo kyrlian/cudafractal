@@ -12,17 +12,8 @@ from fractal.palette import palettes_definitions
 from utils import defaults
 from utils import const
 from ui.keys_config import (
-    key_shift,
-    key_quit,
-    key_zoom,
-    key_screenshot,
-    key_pan_up,
-    key_pan_down,
-    key_pan_left,
-    key_pan_right,
     key_iter,
     key_escape_radius,
-    key_epsilon_reset,
     key_epsilon,
     key_power,
     key_julia,
@@ -31,9 +22,6 @@ from ui.keys_config import (
     key_color_palette,
     key_palette_shift,
     key_palette_width,
-    key_reset,
-    key_help,
-    key_display_info,
 )
 from pygame.key import name as key_name
 
@@ -51,6 +39,9 @@ class AppState:
         self.epsilon = defaults.epsilon
         self.fractal_mode = defaults.fractal_mode
         self.juliaxy = defaults.juliaxy
+
+        # TODO store niter_min, niter_max, z2_min, z2_max, der2_min, der2_max in AppState
+
 
         # color variables
         self.palette_mode = defaults.palette_mode

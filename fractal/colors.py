@@ -226,11 +226,11 @@ def color_kernel(
 
 
 def color_cpu(
-    output_array_niter,
-    output_array_z2,
-    output_array_der2,
-    output_array_k,
-    output_array_rgb,
+    host_array_niter,
+    host_array_z2,
+    host_array_der2,
+    host_array_k,
+    host_array_rgb,
     niter_min: type_math_int,
     niter_max: type_math_int,
     z2_min: type_math_float,
@@ -246,11 +246,11 @@ def color_cpu(
     palette_shift: type_math_float,
 ):
     # NON vectorized version:
-    for x in range(output_array_niter.shape[0]):
-        for y in range(output_array_niter.shape[1]):
-            nb_iter = output_array_niter[x, y]
-            z2 = output_array_z2[x, y]
-            der2 = output_array_der2[x, y]
+    for x in range(host_array_niter.shape[0]):
+        for y in range(host_array_niter.shape[1]):
+            nb_iter = host_array_niter[x, y]
+            z2 = host_array_z2[x, y]
+            der2 = host_array_der2[x, y]
             k, packedrgb = color_xy(
                 x,
                 y,
@@ -271,9 +271,9 @@ def color_cpu(
                 palette_width,
                 palette_shift,
             )
-            output_array_k[x, y] = k
-            output_array_rgb[x, y] = packedrgb
-    return output_array_k, output_array_rgb
+            host_array_k[x, y] = k
+            host_array_rgb[x, y] = packedrgb
+    return host_array_k, host_array_rgb
 
 
 # def build_custom_palette(color_list: List[Color], steps):
