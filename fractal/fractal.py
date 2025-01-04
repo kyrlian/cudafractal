@@ -1,8 +1,12 @@
-from timeit import default_timer
+# from timeit import default_timer
 from math import ceil
 from enum import IntEnum
 from typing import Tuple, List
-from numpy import vectorize as np_vectorize
+from numpy import (
+    vectorize as np_vectorize,
+    minimum as np_minimum,
+    maximum as np_maximum,
+)
 from utils.types import (
     type_math_int,
     type_math_float,
@@ -105,16 +109,19 @@ def min_reduce(a, b):
     # https://numba.readthedocs.io/en/stable/cuda/reduction.html
     return min(a, b)
 
+
 @cuda_reduce
 def max_reduce(a, b):
     return max(a, b)
 
+
 @timing_wrapper
-def get_min_max(device_array):
+def compute_min_max_cuda(device_array):
     # https://numba.pydata.org/numba-doc/dev/cuda-reference/memory.html?highlight=ravel#numba.cuda.cudadrv.devicearray.DeviceNDArray.ravel
     # flatten the array as required by reduction - keeping it in device
-    flat_array_niter = device_array.ravel()
-    return min_reduce(flat_array_niter), max_reduce(flat_array_niter)
+    flat_array = device_array.ravel()
+    return min_reduce(flat_array), max_reduce(flat_array)
+
 
 @timing_wrapper
 def fractal_cpu(
@@ -187,30 +194,11 @@ def fractal_cpu(
 
 
 @timing_wrapper
-def compute_min_max_cpu(
-    host_array_niter,
-    host_array_z2,
-    host_array_der2,
-):
-    # TODO: optimize this function using numpy
-    niter_min = niter_max = host_array_niter[0][0]
-    z2_min = z2_max = host_array_z2[0][0]
-    der2_min = der2_max = host_array_der2[0][0]
-    for x in range(host_array_niter.shape[0]):
-        for y in range(host_array_niter.shape[1]):
-            if niter_min > host_array_niter[x][y]:
-                niter_min = host_array_niter[x][y]
-            if niter_max < host_array_niter[x][y]:
-                niter_max = host_array_niter[x][y]
-            if z2_min > host_array_z2[x][y]:
-                z2_min = host_array_z2[x][y]
-            if z2_max < host_array_z2[x][y]:
-                z2_max = host_array_z2[x][y]
-            if der2_min > host_array_der2[x][y]:
-                der2_min = host_array_der2[x][y]
-            if der2_max < host_array_der2[x][y]:
-                der2_max = host_array_der2[x][y]
-    return niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
+def compute_min_max_cpu(host_array):
+    flat_array = host_array.ravel()
+    return np_minimum.reduce(flat_array, initial=0), np_maximum.reduce(
+        flat_array, initial=0
+    )
 
 
 @timing_wrapper
@@ -304,9 +292,9 @@ def compute_fractal(
                 juliaxy,
             )
             # compute min/max of niter and z2, so palette step can set k based on min/max niter of current image
-            niter_min, niter_max = get_min_max(device_array_niter)
-            z2_min, z2_max = get_min_max(device_array_z2)
-            der2_min, der2_max = get_min_max(device_array_der2)
+            niter_min, niter_max = compute_min_max_cuda(device_array_niter)
+            z2_min, z2_max = compute_min_max_cuda(device_array_z2)
+            der2_min, der2_max = compute_min_max_cuda(device_array_der2)
             # TODO: store niter_min, niter_max, z2_min, z2_max, der2_min, der2_max in AppState
         if recalc_fractal or recalc_color:
             # color is calculated with fractal when it's called, but can be called by itself
@@ -353,9 +341,10 @@ def compute_fractal(
                 juliaxy,
             )
             # compute min/max of niter and z2, so palette step can set k based on min/max niter of current image
-            niter_min, niter_max, z2_min, z2_max, der2_min, der2_max = (
-                compute_min_max_cpu(host_array_niter, host_array_z2, host_array_der2)
-            )
+            niter_min, niter_max = compute_min_max_cpu(host_array_niter)
+            z2_min, z2_max = compute_min_max_cpu(host_array_z2)
+            der2_min, der2_max = compute_min_max_cpu(host_array_der2)
+            # TODO: store niter_min, niter_max, z2_min, z2_max, der2_min, der2_max in AppState
         if recalc_fractal or recalc_color:
             # color is calculated with fractal when it's called, but can be called by itself
             host_array_k, host_array_rgb = color_cpu(
@@ -378,7 +367,7 @@ def compute_fractal(
                 palette_width,
                 palette_shift,
             )
-    # print(f"Frame calculated in {(default_timer() - timerstart)}s")
+    # TODO store stuff from AppState
     return (
         host_array_niter,
         niter_min,
