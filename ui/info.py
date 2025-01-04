@@ -84,54 +84,17 @@ def print_info(
 
 
 def print_help(appstate):
-    # uses default values from defaults.py
-    # TODO reuse appState.getInfo()
     print("Help:")
-    print("    key(s): role, (default, current)")
-    print(f"    {key_name(key_zoom)}, left click: zoom in")
-    print(f"    {key_name(key_shift)}+{key_name(key_zoom)}, right click: zoom out")
-    print(
-        f"    {key_name(key_pan_up)}, {key_name(key_pan_down)}, {key_name(key_pan_left)}, {key_name(key_pan_right)}: pan"
-    )
-    normalization_mode_name = Normalization_Mode(appstate.normalization_mode).name
-    print(
-        f"    {key_name(key_normalization_mode)}: normalization mode ({defaults.normalization_mode}, {appstate.normalization_mode}:{normalization_mode_name})"
-    )
-    palette_mode_name = Palette_Mode(appstate.palette_mode).name
-    print(
-        f"    {key_name(key_palette_mode)}: palette mode ({defaults.palette_mode}, {appstate.palette_mode}:{palette_mode_name})"
-    )
-    print(
-        f"    {key_name(key_color_palette)}: custom palette ({appstate.custom_palette_name})"
-    )
-    print(
-        f"    {key_name(key_palette_shift)}: palette shift ({defaults.palette_shift}, {appstate.palette_shift})"
-    )
-    print(
-        f"    {key_name(key_palette_width)}: palette width ({defaults.palette_width}, {appstate.palette_width})"
-    )
-    print(
-        f"    {key_name(key_iter)}: max iterations ({defaults.max_iterations}, {appstate.max_iterations})"
-    )
-    print(f"    {key_name(key_power)}: power({defaults.power}, {appstate.power})")
-    print(
-        f"    {key_name(key_escape_radius)}: escape radius({defaults.escape_radius}, {appstate.escape_radius})"
-    )
-    print(
-        f"    {key_name(key_epsilon)}: epsilon ({defaults.epsilon}, {appstate.epsilon})"
-    )
-    print(
-        f"    {key_name(key_epsilon_reset)}: epsilon=0 {defaults.epsilon}, {appstate.epsilon})"
-    )
-    fractal_mode_name = Fractal_Mode(appstate.fractal_mode).name
-    print(
-        f"    {key_name(key_julia)}: middle click: julia/mandelbrot ({defaults.fractal_mode}, {appstate.fractal_mode}:{fractal_mode_name})"
-    )
-    print(f"    {key_name(key_display_info)}: display info")
-    print(f"    {key_name(key_screenshot)}: screenshot")
-    print(f"    {key_name(key_help)}: help")
-    print(f"    {key_name(key_reset)}: reset")
-    print(f"    {key_name(key_quit)}: quit")
-    print(
-        f"current x, y, h: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}"
-    )
+    print("key(s): role, value")
+    print(f"{key_name(key_zoom)}, left click: zoom in")
+    print(f"{key_name(key_shift)}+{key_name(key_zoom)}, right click: zoom out")
+    print(f"current center x, center y, height: {appstate.xcenter}, {appstate.ycenter}, {appstate.yheight}")
+    print(f"{key_name(key_pan_up)}, {key_name(key_pan_down)}, {key_name(key_pan_left)}, {key_name(key_pan_right)}: pan")
+    for i in appstate.get_info():
+        print(i)
+    print(f"{key_name(key_epsilon_reset)}: epsilon=0")
+    print(f"{key_name(key_display_info)}: display info")
+    print(f"{key_name(key_screenshot)}: screenshot")
+    print(f"{key_name(key_help)}: help")
+    print(f"{key_name(key_reset)}: reset")
+    print(f"{key_name(key_quit)}: quit")
