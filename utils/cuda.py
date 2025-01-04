@@ -10,6 +10,7 @@ try:
         detect as cuda_detect,
         is_available as cuda_available,
         grid as cuda_grid,
+        reduce as cuda_reduce,
     )
 
     def compute_threadsperblock(screenw, screenh):
@@ -75,3 +76,12 @@ except ImportError:
 
     def cuda_copy_to_host(device_array):
         return device_array
+
+    def cuda_reduce(binary_func):
+        def reducer(an_array):
+            tmp = an_array[0]
+            for elem in an_array:
+                tmp = binary_func(tmp, elem)
+            return tmp
+
+        return reducer

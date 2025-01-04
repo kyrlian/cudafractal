@@ -18,9 +18,11 @@ from utils.cuda import (
     init_array,
     cuda_copy_to_device,
     cuda_copy_to_host,
+    cuda_reduce,
 )
 from fractal.colors import color_kernel, color_cpu
 from utils.timer import timing_wrapper
+
 
 class Fractal_Mode(IntEnum):
     MANDELBROT = 0
@@ -97,36 +99,22 @@ def fractal_kernel(
         device_array_z2[x, y] = z2
         device_array_der2[x, y] = der2
 
+
+@cuda_reduce
+def min_reduce(a, b):
+    # https://numba.readthedocs.io/en/stable/cuda/reduction.html
+    return min(a, b)
+
+@cuda_reduce
+def max_reduce(a, b):
+    return max(a, b)
+
 @timing_wrapper
-def compute_min_max_cuda(
-    device_array_niter,
-    device_array_z2,
-    device_array_der2,
-):
-    # copy arrays back to host
-    host_array_niter = cuda_copy_to_host(device_array_niter)
-    host_array_z2 = cuda_copy_to_host(device_array_z2)
-    host_array_der2 = cuda_copy_to_host(device_array_der2)
-    # TODO: optimize this function using cuda
-    # store niter_min, niter_max, z2_min, z2_max, der2_min, der2_max in AppState
-    niter_min = niter_max = host_array_niter[0][0]
-    z2_min = z2_max = host_array_z2[0][0]
-    der2_min = der2_max = host_array_der2[0][0]
-    for x in range(host_array_niter.shape[0]):
-        for y in range(host_array_niter.shape[1]):
-            if niter_min > host_array_niter[x][y]:
-                niter_min = host_array_niter[x][y]
-            if niter_max < host_array_niter[x][y]:
-                niter_max = host_array_niter[x][y]
-            if z2_min > host_array_z2[x][y]:
-                z2_min = host_array_z2[x][y]
-            if z2_max < host_array_z2[x][y]:
-                z2_max = host_array_z2[x][y]
-            if der2_min > host_array_der2[x][y]:
-                der2_min = host_array_der2[x][y]
-            if der2_max < host_array_der2[x][y]:
-                der2_max = host_array_der2[x][y]
-    return niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
+def get_min_max(device_array):
+    # https://numba.pydata.org/numba-doc/dev/cuda-reference/memory.html?highlight=ravel#numba.cuda.cudadrv.devicearray.DeviceNDArray.ravel
+    # flatten the array as required by reduction - keeping it in device
+    flat_array_niter = device_array.ravel()
+    return min_reduce(flat_array_niter), max_reduce(flat_array_niter)
 
 @timing_wrapper
 def fractal_cpu(
@@ -197,6 +185,7 @@ def fractal_cpu(
                 host_array_der2[x, y] = der2
     return host_array_niter, host_array_z2, host_array_der2
 
+
 @timing_wrapper
 def compute_min_max_cpu(
     host_array_niter,
@@ -222,6 +211,7 @@ def compute_min_max_cpu(
             if der2_max < host_array_der2[x][y]:
                 der2_max = host_array_der2[x][y]
     return niter_min, niter_max, z2_min, z2_max, der2_min, der2_max
+
 
 @timing_wrapper
 def init_arrays(WINDOW_SIZE):
@@ -314,13 +304,10 @@ def compute_fractal(
                 juliaxy,
             )
             # compute min/max of niter and z2, so palette step can set k based on min/max niter of current image
-            niter_min, niter_max, z2_min, z2_max, der2_min, der2_max = (
-                compute_min_max_cuda(
-                    device_array_niter,
-                    device_array_z2,
-                    device_array_der2,
-                )
-            )
+            niter_min, niter_max = get_min_max(device_array_niter)
+            z2_min, z2_max = get_min_max(device_array_z2)
+            der2_min, der2_max = get_min_max(device_array_der2)
+            # TODO: store niter_min, niter_max, z2_min, z2_max, der2_min, der2_max in AppState
         if recalc_fractal or recalc_color:
             # color is calculated with fractal when it's called, but can be called by itself
             color_kernel[blockspergrid, threadsperblock](
