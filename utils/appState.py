@@ -40,7 +40,13 @@ class AppState:
         self.fractal_mode = defaults.fractal_mode
         self.juliaxy = defaults.juliaxy
 
-        # TODO store niter_min, niter_max, z2_min, z2_max, der2_min, der2_max in AppState
+        # fractal info
+        self.niter_min= None
+        self.niter_max= None
+        self.z2_min= None
+        self.z2_max= None
+        self.der2_min= None
+        self.der2_max = None
 
 
         # color variables
@@ -60,6 +66,9 @@ class AppState:
         self.DISPLAY_RATIO = const.DISPLAY_RATIO
         self.DISPLAY_WIDTH = math.floor(self.DISPLAY_HEIGTH * self.DISPLAY_RATIO)
         self.WINDOW_SIZE = self.DISPLAY_WIDTH, self.DISPLAY_HEIGTH
+
+        # derived variables
+        self.recalc_size()
 
     def reset(self):
         print("Reset ")
