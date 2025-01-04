@@ -222,7 +222,7 @@ def pygamemain(src_image=None):
                     recalc_fractal = True
                 elif event.key == key_iter:
                     if shift:
-                        appstate.change_max_iterations(0.9)
+                        appstate.change_max_iterations(1/1.1)
                     else:
                         appstate.change_max_iterations(1.1)
                     # Recompute palettes
