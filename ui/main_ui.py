@@ -181,144 +181,156 @@ def pygamemain(src_image=None):
         True,
         True,
     )
+
+
+    def handle_event(event, appstate, screen_surface, host_array_niter, host_array_z2
+    , host_array_der2
+    , host_array_k
+    , host_array_rgb
+    ):
+        recalc_fractal = False
+        recalc_color = False
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            shift = (
+                pygame.key.get_pressed()[key_shift]
+                or pygame.key.get_pressed()[key_shift_r]
+            )
+            ctrl = (
+                pygame.key.get_pressed()[key_ctrl]
+                or pygame.key.get_pressed()[key_ctrl_r]
+            )
+            if event.key == key_quit:
+                running = False
+            elif event.key == key_zoom:
+                if shift:
+                    appstate.zoom_out()
+                else:
+                    appstate.zoom_in()
+                recalc_fractal = True
+            elif event.key == key_screenshot:
+                screenshot(screen_surface,appstate)
+            elif event.key == key_pan_up:
+                appstate.pan(0, 1)
+                recalc_fractal = True
+            elif event.key == key_pan_down:
+                appstate.pan(0, -1)
+                recalc_fractal = True
+            elif event.key == key_pan_left:
+                appstate.pan(-1, 0)
+                recalc_fractal = True
+            elif event.key == key_pan_right:
+                appstate.pan(1, 0)
+                recalc_fractal = True
+            elif event.key == key_iter:
+                if shift:
+                    appstate.change_max_iterations(1/1.1)
+                else:
+                    appstate.change_max_iterations(1.1)
+                # Recompute palettes
+                # TODO: add a specific "palette_steps" parameter instead of max iterations
+                computed_palettes = prepare_palettes(
+                    palettes_definitions, appstate.max_iterations
+                )
+                recalc_fractal = True
+            elif event.key == key_escape_radius:
+                if shift:
+                    appstate.change_escape_radius(0.5)
+                else:
+                    appstate.change_escape_radius(2)
+                recalc_fractal = True
+            elif event.key == key_epsilon_reset:
+                appstate.change_epsilon(0)
+                recalc_fractal = True
+            elif event.key == key_epsilon:
+                if shift:
+                    appstate.change_epsilon(10)
+                else:
+                    appstate.change_epsilon(0.1)
+                recalc_fractal = True
+            elif event.key == key_power:
+                if shift:
+                    appstate.change_power(-1)
+                else:
+                    appstate.change_power(1)
+                recalc_fractal = True
+            elif event.key == key_julia:
+                appstate.change_fractal_mode(pygame.mouse.get_pos())
+                recalc_fractal = True
+            elif event.key == key_normalization_mode:
+                appstate.change_normalization_mode()
+                recalc_color = True
+            elif event.key == key_palette_mode:
+                appstate.change_color_palette_mode()
+                recalc_color = True
+            elif event.key == key_color_palette:
+                appstate.change_color_palette_name()
+                appstate.reset_palette_shift()
+                recalc_color = True
+            elif event.key == key_palette_shift:
+                step = 0.01
+                direction = 1
+                if ctrl:
+                    step = 0.1
+                if shift:
+                    direction = -1
+                appstate.change_palette_shift(step * direction)
+                recalc_color = True
+            elif event.key == key_palette_width:
+                if shift:
+                    appstate.change_palette_width(1.1)
+                else:
+                    appstate.change_palette_width(0.9)
+                recalc_color = True
+            elif event.key == key_reset:
+                appstate.reset()
+                recalc_fractal = True
+            elif event.key == key_help:
+                print_help(appstate)
+            elif event.key == key_display_info:
+                appstate.toggle_info()
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            recalc_fractal = True
+            # 1 - left click, 2 - middle click, 3 - right click, 4 - scroll up, 5 - scroll down
+            if event.button == 1 or event.button == 4:
+                appstate.zoom_in(pygame.mouse.get_pos())
+            elif event.button == 3 or event.button == 5:
+                appstate.zoom_out(pygame.mouse.get_pos())
+            elif event.button == 2:
+                appstate.change_fractal_mode(pygame.mouse.get_pos())
+        elif event.type == pygame.MOUSEMOTION:
+            # show info at cursor (ni, k...)
+            (mx, my) = pygame.mouse.get_pos()
+            ni = host_array_niter[mx, my]
+            z2 = host_array_z2[mx, my]
+            der2 = host_array_der2[mx, my]
+            k = host_array_k[mx, my]
+            rgb = host_array_rgb[mx, my]
+            print_info(
+                appstate,
+                screen_surface,
+                ni,
+                niter_min,
+                niter_max,
+                z2,
+                z2_min,
+                z2_max,
+                der2,
+                der2_min,
+                der2_max,
+                k,
+                rgb,
+            )
+        return recalc_fractal, recalc_color
     # Run the game loop
     running = True
     while running:
         for event in pygame.event.get():
-            recalc_fractal = False
-            recalc_color = False
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                shift = (
-                    pygame.key.get_pressed()[key_shift]
-                    or pygame.key.get_pressed()[key_shift_r]
-                )
-                ctrl = (
-                    pygame.key.get_pressed()[key_ctrl]
-                    or pygame.key.get_pressed()[key_ctrl_r]
-                )
-                if event.key == key_quit:
-                    running = False
-                elif event.key == key_zoom:
-                    if shift:
-                        appstate.zoom_out()
-                    else:
-                        appstate.zoom_in()
-                    recalc_fractal = True
-                elif event.key == key_screenshot:
-                    screenshot(screen_surface,appstate)
-                elif event.key == key_pan_up:
-                    appstate.pan(0, 1)
-                    recalc_fractal = True
-                elif event.key == key_pan_down:
-                    appstate.pan(0, -1)
-                    recalc_fractal = True
-                elif event.key == key_pan_left:
-                    appstate.pan(-1, 0)
-                    recalc_fractal = True
-                elif event.key == key_pan_right:
-                    appstate.pan(1, 0)
-                    recalc_fractal = True
-                elif event.key == key_iter:
-                    if shift:
-                        appstate.change_max_iterations(1/1.1)
-                    else:
-                        appstate.change_max_iterations(1.1)
-                    # Recompute palettes
-                    # TODO: add a specific "palette_steps" parameter instead of max iterations
-                    computed_palettes = prepare_palettes(
-                        palettes_definitions, appstate.max_iterations
-                    )
-                    recalc_fractal = True
-                elif event.key == key_escape_radius:
-                    if shift:
-                        appstate.change_escape_radius(0.5)
-                    else:
-                        appstate.change_escape_radius(2)
-                    recalc_fractal = True
-                elif event.key == key_epsilon_reset:
-                    appstate.change_epsilon(0)
-                    recalc_fractal = True
-                elif event.key == key_epsilon:
-                    if shift:
-                        appstate.change_epsilon(10)
-                    else:
-                        appstate.change_epsilon(0.1)
-                    recalc_fractal = True
-                elif event.key == key_power:
-                    if shift:
-                        appstate.change_power(-1)
-                    else:
-                        appstate.change_power(1)
-                    recalc_fractal = True
-                elif event.key == key_julia:
-                    appstate.change_fractal_mode(pygame.mouse.get_pos())
-                    recalc_fractal = True
-                elif event.key == key_normalization_mode:
-                    appstate.change_normalization_mode()
-                    recalc_color = True
-                elif event.key == key_palette_mode:
-                    appstate.change_color_palette_mode()
-                    recalc_color = True
-                elif event.key == key_color_palette:
-                    appstate.change_color_palette_name()
-                    appstate.reset_palette_shift()
-                    recalc_color = True
-                elif event.key == key_palette_shift:
-                    step = 0.01
-                    direction = 1
-                    if ctrl:
-                        step = 0.1
-                    if shift:
-                        direction = -1
-                    appstate.change_palette_shift(step * direction)
-                    recalc_color = True
-                elif event.key == key_palette_width:
-                    if shift:
-                        appstate.change_palette_width(1.1)
-                    else:
-                        appstate.change_palette_width(0.9)
-                    recalc_color = True
-                elif event.key == key_reset:
-                    appstate.reset()
-                    recalc_fractal = True
-                elif event.key == key_help:
-                    print_help(appstate)
-                elif event.key == key_display_info:
-                    appstate.toggle_info()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                recalc_fractal = True
-                # 1 - left click, 2 - middle click, 3 - right click, 4 - scroll up, 5 - scroll down
-                if event.button == 1 or event.button == 4:
-                    appstate.zoom_in(pygame.mouse.get_pos())
-                elif event.button == 3 or event.button == 5:
-                    appstate.zoom_out(pygame.mouse.get_pos())
-                elif event.button == 2:
-                    appstate.change_fractal_mode(pygame.mouse.get_pos())
-            elif event.type == pygame.MOUSEMOTION:
-                # show info at cursor (ni, k...)
-                (mx, my) = pygame.mouse.get_pos()
-                ni = host_array_niter[mx, my]
-                z2 = host_array_z2[mx, my]
-                der2 = host_array_der2[mx, my]
-                k = host_array_k[mx, my]
-                rgb = host_array_rgb[mx, my]
-                print_info(
-                    appstate,
-                    screen_surface,
-                    ni,
-                    niter_min,
-                    niter_max,
-                    z2,
-                    z2_min,
-                    z2_max,
-                    der2,
-                    der2_min,
-                    der2_max,
-                    k,
-                    rgb,
-                )
+            recalc_fractal, recalc_color = handle_event(event, appstate, screen_surface, host_array_niter, host_array_z2
+            , host_array_der2
+            , host_array_k
+            , host_array_rgb)
             if recalc_fractal or recalc_color:
                 (
                     host_array_niter,

@@ -49,7 +49,7 @@ def compute_color(
 def prepare_palette(palette_colors, steps: type_math_int) -> List[type_color_int]:
     computed_palette = []
     for i in range(steps):
-        k = i / steps
+        k = type_math_float(i / steps)
         computed_palette.append(compute_color(palette_colors, k))
     return computed_palette
 

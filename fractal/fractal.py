@@ -1,7 +1,8 @@
 # from timeit import default_timer
 from enum import IntEnum
 from typing import List
-
+from fractal.colors import Palette_Mode, Normalization_Mode
+from fractal.fractal_math import Fractal_Mode
 from utils.types import (
     type_math_int,
     type_math_float,
@@ -17,12 +18,6 @@ from utils.cuda import (
 from utils.timer import timing_wrapper
 from fractal.fractal_cuda import compute_fracta_cuda
 from fractal.fractal_cpu import compute_fractal_cpu
-
-
-class Fractal_Mode(IntEnum):
-    MANDELBROT = 0
-    JULIA = 1
-
 
 @timing_wrapper
 def init_arrays(WINDOW_SIZE):
@@ -65,14 +60,14 @@ def compute_fractal(
     xmin: type_math_float,
     ymin: type_math_float,
     ymax: type_math_float,
-    fractalmode: type_enum_int,
+    fractalmode: Fractal_Mode,
     max_iterations: type_math_int,
     power: type_math_int,
     escape_radius: type_math_int,
     epsilon: type_math_float,
     juliaxy: type_math_complex,
-    normalization_mode: type_enum_int,
-    palette_mode: type_enum_int,
+    normalization_mode: Normalization_Mode,
+    palette_mode: Palette_Mode,
     custom_palette: List[type_color_int],
     palette_width: type_math_float,
     palette_shift: type_math_float,

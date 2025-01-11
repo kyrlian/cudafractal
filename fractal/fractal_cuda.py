@@ -1,6 +1,7 @@
 # from timeit import default_timer
 from math import ceil
 from typing import List
+
 from utils.types import (
     type_math_int,
     type_math_float,
@@ -20,8 +21,8 @@ from utils.cuda import (
 )
 from utils.timer import timing_wrapper
 
-from fractal.colors import color_kernel
-from fractal.fractal_math import fractal_xy
+from fractal.colors import Normalization_Mode, Palette_Mode, color_kernel
+from fractal.fractal_math import fractal_xy, Fractal_Mode
 
 
 @cuda_jit(
@@ -99,14 +100,14 @@ def compute_fracta_cuda(
     xmin: type_math_float,
     ymin: type_math_float,
     ymax: type_math_float,
-    fractalmode: type_enum_int,
+    fractalmode: Fractal_Mode,
     max_iterations: type_math_int,
     power: type_math_int,
     escape_radius: type_math_int,
     epsilon: type_math_float,
     juliaxy: type_math_complex,
-    normalization_mode: type_enum_int,
-    palette_mode: type_enum_int,
+    normalization_mode: Normalization_Mode,
+    palette_mode: Palette_Mode,
     custom_palette: List[type_color_int],
     palette_width: type_math_float,
     palette_shift: type_math_float,

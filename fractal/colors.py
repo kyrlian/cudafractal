@@ -160,16 +160,16 @@ def color_xy(
     match palette_mode:
         case Palette_Mode.HUE:
             if shifted_k == float(0.0):
-                packedrgb = rgb_to_packed(0, 0, 0)
+                packedrgb = rgb_to_packed(type_color_int_small(0), type_color_int_small(0),type_color_int_small(0))
             else:
-                packedrgb = hsv_to_rgb(shifted_k, 1, 1)
+                packedrgb = hsv_to_rgb(shifted_k,type_color_float(1),type_color_float(1))
         case Palette_Mode.GRAYSCALE:
-            k255 = int(shifted_k * 255)
+            k255 = type_color_int_small(shifted_k * 255)
             packedrgb = rgb_to_packed(k255, k255, k255)
         case Palette_Mode.CUSTOM:  # custom palette_mode k to rgb
             packedrgb = get_palette_color(custom_palette, shifted_k)
         case _:
-            packedrgb = rgb_to_packed(255, 0, 0)
+            packedrgb = rgb_to_packed(type_color_int_small(255), type_color_int_small(0),type_color_int_small(0))
     return shifted_k, packedrgb
 
 
@@ -196,7 +196,7 @@ def color_kernel(
     palette_width: type_math_float,
     palette_shift: type_math_float,
 ) -> None:
-    x, y = cuda_grid(2)
+    x, y = cuda_grid(ndim=2)
     if x < device_array_niter.shape[0] and y < device_array_niter.shape[1]:
         nb_iter = device_array_niter[x, y]
         z2 = device_array_z2[x, y]
@@ -252,8 +252,8 @@ def color_cpu(
             z2 = host_array_z2[x, y]
             der2 = host_array_der2[x, y]
             k, packedrgb = color_xy(
-                x,
-                y,
+                type_math_int(x),
+                type_math_int(y),
                 nb_iter,
                 niter_min,
                 niter_max,

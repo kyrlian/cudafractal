@@ -124,11 +124,11 @@ class AppState:
         print(f"Palette shift: {self.palette_shift}")
 
     def change_palette_width(self, factor):
-        self.max_iterations = int(self.palette_width * factor)
+        self.max_iterations = type_math_int(self.palette_width * factor)
         print(f"Palette width: {self.palette_width}")
 
     def change_max_iterations(self, factor):
-        self.max_iterations = int(self.max_iterations * factor)
+        self.max_iterations = type_math_int(self.max_iterations * factor)
         print(f"Max iterations: {self.max_iterations}")
 
     def change_power(self, plusminus):
